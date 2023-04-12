@@ -1,0 +1,19 @@
+__default__:
+    threads: 16
+    h_vmem: 2G
+    extra: ''
+    tmpdir: "$TMP"
+    log: '{wildcards.sample}'
+    jobname: '{wildcards.sample}'
+
+
+vs1:
+    modules: virsorter/2.2.3-Python-3.8.10
+
+checkv:
+  modules:
+    - checkv/0.8.1
+    - Python/2.7.15-foss-2018b
+
+vs4dramv:
+  modules: virsorter/2.2.3-Python-3.8.10
