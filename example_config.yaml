@@ -1,12 +1,16 @@
-email: poorani.subramanian@nih.gov
-scriptdir: /nethome/subramanianp4/git/virome-pipeline
-clusterfile: /nethome/subramanianp4/git/virome-pipeline/vp.locus.yaml
+email: address@nih.gov
+scriptdir: /path/to/virome-pipeline
+clusterfile: /path/to/virome-pipeline/vp.locus.yaml
 
 ## directories
-workdir: /hpcdata/bcbb/poorani/test
+workdir: /path/to/workingdir
 # these directories are relative to the working directory - use full path if the dir is somewhere else
 indir: input
 outdir: virome_output
+
+## rule specific parameters that could change between projects
+## we will use default db
+## checkvdb: /hpcdata/bio_data/checkv/checkv-db-v1.0
 
 ## input files
 # input files are expected to be like {indir}/{sampleprefix}{assembly_suffix}
@@ -15,3 +19,4 @@ assembly_suffix: .scaffolds.fasta
 # sample prefixes to be used throughout pipeline
 samples:
   S105b
+  S105c
