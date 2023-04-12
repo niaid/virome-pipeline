@@ -57,13 +57,10 @@ rule vs1:
 
     ## cleanup possible previous run
     rm -rf {params.outdir}
-
-    ## do work in temp directory and move to out directory at the end
-    mkdir -p {params.tempdir}
-    trap 'mv -v {params.tempdir} {params.outdir}' ERR EXIT SIGTERM
+    mkdir -p {params.outdir}
 
     virsorter run --keep-original-seq -i {input.assembly} \
-            -w {params.tempdir} --include-groups dsDNAphage,ssDNA \
+            -w {params.outdir} --include-groups dsDNAphage,ssDNA \
             --min-length 1000 --min-score 0.5 -j {threads} all
 
 
@@ -81,15 +78,12 @@ rule checkv:
 
     ## cleanup possible previous run
     rm -rf {params.outdir}
-
-    ## do work in temp directory and move to out directory at the end
-    mkdir -p {params.tempdir}
-    trap 'mv -v {params.tempdir} {params.outdir}' ERR EXIT SIGTERM
+    mkdir -p {params.outdir}
 
     checkv end_to_end {input} {params.tempdir} -t {threads}
 
-    cat {params.tempdir}/proviruses.fna {params.tempdir}/viruses.fna \
-        >{params.tempdir}/combined.fna
+    cat {params.outdir}/proviruses.fna {params.outdir}/viruses.fna \
+        >{params.outdir}/combined.fna
     """
 
 rule vs4dramv:
@@ -106,14 +100,11 @@ rule vs4dramv:
 
     ## cleanup possible previous failed run
     rm -rf {params.outdir}
-
-    ## do work in temp directory and move to out directory at the end
-    mkdir -p {params.tempdir}
-    trap 'mv -v {params.tempdir} {params.outdir}' ERR EXIT SIGTERM
+    mkdir -p {params.outdir}
 
     virsorter run --seqname-suffix-off --viral-gene-enrich-off --provirus-off \
         --prep-for-dramv -i {input} \
-        -w {params.tempdir} --include-groups dsDNAphage,ssDNA --min-length 1000 \
+        -w {params.outdir} --include-groups dsDNAphage,ssDNA --min-length 1000 \
         --min-score 0.5 -j {threads} all
 
     """
