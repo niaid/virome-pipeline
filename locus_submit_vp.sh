@@ -23,6 +23,7 @@ outputdir=$(realpath ${o1}/${o2})
 clustercmd="qsub -l h_vmem={cluster.h_vmem} -j y -pe threaded {cluster.threads} {cluster.extra} -o ${outputdir}/{cluster.log}"
 
 ## remove/add --dryrun to test
+## sometimes useful to add --ignore-incomplete if snakemake's incomplete checking is not working for you.
 snakemake -s /path/to/virome-pipeline/Snakefile --jobs 32 --jobname "{name}.{cluster.jobname}.{jobid}" \
 	  --configfile ${configfile} \
 	  --cluster "${clustercmd}" --cluster-config ${clusterfile} \
