@@ -48,8 +48,7 @@ rule vs1:
     envmodules: clust_conf["vs1"]["modules"]
     input: fake = ancient(rules.createsampledir.output),
            assembly = pjoin(IN, "{sample}" + config["assembly_suffix"])
-    params: outdir = pjoin(SOUT, "vs1"),
-            minlen = config["vs_min_length"]
+    params: outdir = pjoin(SOUT, "vs1")
     output: pjoin(SOUT, 'vs1/final-viral-combined.fa')
     shell:"""
     ## virsorter first pass to id viral seqs in assemblies
@@ -61,7 +60,7 @@ rule vs1:
 
     virsorter run --keep-original-seq -i {input.assembly} \
             -w {params.outdir} --include-groups dsDNAphage,ssDNA \
-            --min-length {params.minlen} --min-score 0.5 -j {threads} all
+            --min-length {config[vs_min_length]} --min-score 0.5 -j {threads} all
 
 
     """
@@ -79,7 +78,7 @@ rule checkv:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-    checkv end_to_end {input} {params.outdir} -t {threads}
+    checkv end_to_end {input} {params.outdir} -d {config[checkvdb]} -t {threads}
 
     cat {params.outdir}/proviruses.fna {params.outdir}/viruses.fna \
         >{params.outdir}/combined.fna
@@ -89,8 +88,7 @@ rule vs4dramv:
     threads: clust_conf["vs4dramv"]["threads"]
     envmodules: clust_conf["vs4dramv"]["modules"]
     input: rules.checkv.output
-    params: outdir = pjoin(SOUT, "vs2"),
-            minlen = config["vs_min_length"]
+    params: outdir = pjoin(SOUT, "vs2")
     output: fasta = pjoin(SOUT, "vs2/for-dramv/final-viral-combined-for-dramv.fa"),
             tab = pjoin(SOUT, "vs2/for-dramv/viral-affi-contigs-for-dramv.tab")
     shell:"""
@@ -103,7 +101,7 @@ rule vs4dramv:
 
     virsorter run --seqname-suffix-off --viral-gene-enrich-off --provirus-off \
         --prep-for-dramv -i {input} \
-        -w {params.outdir} --include-groups dsDNAphage,ssDNA --min-length {params.minlen} \
+        -w {params.outdir} --include-groups dsDNAphage,ssDNA --min-length {config[vs_min_length]} \
         --min-score 0.5 -j {threads} all
 
     """
