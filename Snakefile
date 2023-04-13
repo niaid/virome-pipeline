@@ -79,7 +79,7 @@ rule checkv:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-    checkv end_to_end {input} {params.tempdir} -t {threads}
+    checkv end_to_end {input} {params.outdir} -t {threads}
 
     cat {params.outdir}/proviruses.fna {params.outdir}/viruses.fna \
         >{params.outdir}/combined.fna
