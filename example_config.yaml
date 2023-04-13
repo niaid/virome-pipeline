@@ -1,4 +1,5 @@
 email: address@nih.gov
+## directory where we clone this repo locally
 scriptdir: /path/to/virome-pipeline
 clusterfile: /path/to/virome-pipeline/vp.locus.yaml
 
