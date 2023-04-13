@@ -1,20 +1,23 @@
 email: address@nih.gov
 ## directory where we clone this repo locally
 scriptdir: /path/to/virome-pipeline
-clusterfile: /path/to/virome-pipeline/vp.locus.yaml
+clusterfile: /path/to/virome-pipeline/locus.cluster_config.yaml
 
 ## directories
 workdir: /path/to/workingdir
 # these directories are relative to the working directory - use full path if the dir is somewhere else
+# they need to exist
 indir: input
 outdir: virome_output
 
 ## rule specific parameters that could change between projects
 ## we will use default db
 ## checkvdb: /hpcdata/bio_data/checkv/checkv-db-v1.0
+# min length for virsorter
+vs_min_length: 1000
 
 ## input files
-# input files are expected to be like {indir}/{sampleprefix}{assembly_suffix}
+# input files are expected to be like {indir}/{sample prefix}{assembly_suffix}
 assembly_suffix: .scaffolds.fasta
 
 # sample prefixes to be used throughout pipeline

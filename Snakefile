@@ -32,10 +32,10 @@ localrules: all, createsampledir
 
 rule createsampledir:
     """setup output directories"""
-    output: pjoin(SOUT, "snakefake")
+    output: pjoin(SOUT, "logs/snakefake")
     params: outdir = SOUT
     shell:"""
-    mkdir -p {params.outdir}
+    mkdir -p {params.outdir}/logs
     touch {output}
     """
 
@@ -49,7 +49,7 @@ rule vs1:
     input: fake = ancient(rules.createsampledir.output),
            assembly = pjoin(IN, "{sample}" + config["assembly_suffix"])
     params: outdir = pjoin(SOUT, "vs1"),
-            tempdir = pjoin(TMP, "vs1")
+            minlen = config["vs_min_length"]
     output: pjoin(SOUT, 'vs1/final-viral-combined.fa')
     shell:"""
     ## virsorter first pass to id viral seqs in assemblies
@@ -61,7 +61,7 @@ rule vs1:
 
     virsorter run --keep-original-seq -i {input.assembly} \
             -w {params.outdir} --include-groups dsDNAphage,ssDNA \
-            --min-length 1000 --min-score 0.5 -j {threads} all
+            --min-length {params.minlen} --min-score 0.5 -j {threads} all
 
 
     """
@@ -70,8 +70,7 @@ rule checkv:
     threads: clust_conf["checkv"]["threads"]
     envmodules: *clust_conf["checkv"]["modules"]
     input: rules.vs1.output
-    params: outdir = pjoin(SOUT, "checkv"),
-            tempdir = pjoin(TMP, "checkv")
+    params: outdir = pjoin(SOUT, "checkv")
     output: pjoin(SOUT, "checkv", "combined.fna")
     shell:"""
     ## run checkv to qc virsorter results and trim host regions left at the end of proviruses
@@ -91,7 +90,7 @@ rule vs4dramv:
     envmodules: clust_conf["vs4dramv"]["modules"]
     input: rules.checkv.output
     params: outdir = pjoin(SOUT, "vs2"),
-            tempdir = pjoin(TMP, "vs2")
+            minlen = config["vs_min_length"]
     output: fasta = pjoin(SOUT, "vs2/for-dramv/final-viral-combined-for-dramv.fa"),
             tab = pjoin(SOUT, "vs2/for-dramv/viral-affi-contigs-for-dramv.tab")
     shell:"""
@@ -104,7 +103,7 @@ rule vs4dramv:
 
     virsorter run --seqname-suffix-off --viral-gene-enrich-off --provirus-off \
         --prep-for-dramv -i {input} \
-        -w {params.outdir} --include-groups dsDNAphage,ssDNA --min-length 1000 \
+        -w {params.outdir} --include-groups dsDNAphage,ssDNA --min-length {params.minlen} \
         --min-score 0.5 -j {threads} all
 
     """

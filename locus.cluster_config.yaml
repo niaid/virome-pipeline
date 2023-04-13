@@ -3,12 +3,12 @@ __default__:
     h_vmem: 2G
     extra: ''
     tmpdir: "$TMP"
-    log: '{wildcards.sample}'
+    log: '{wildcards.sample}/logs'
     jobname: '{wildcards.sample}'
 
 
 vs1:
-    modules: virsorter/2.2.3-Python-3.8.10
+  modules: virsorter/2.2.3-Python-3.8.10
 
 checkv:
   modules:
