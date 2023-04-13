@@ -11,7 +11,7 @@
 module load snakemake || exit 1
 
 ## project config
-configfile=/path/to/config.yaml
+configfile=/path/to/project_config.yaml
 
 ## cluster config file
 clusterfile=$(grep "clusterfile" ${configfile} | awk '{ print $2 }')
