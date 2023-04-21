@@ -106,9 +106,36 @@ rule vs4dramv:
 
     """
 
+rule dramv:
+    threads: clust_conf["dramv"]["threads"]
+    envmodules: *clust_conf["dramv"]["modules"]
+    input: fasta = rules.vs4dramv.output.fasta,
+           tab = rules.vs4dramv.output.tab
+    params: outdir = pjoin(SOUT, "dramv")
+    output: pjoin(SOUT, "dramv/dramv-distill/amg_summary.tsv")
+    shell:"""
+    ## DRAM-v annotation of viral sequences
+    DRAM-setup.py version
+    mmseqs -h | head -n 7
+
+    ## cleanup possible previous failed run
+    rm -rf {params.outdir}
+    mkdir -p {params.outdir}
+
+    DRAM-v.py annotate -i {input.fasta} \
+        -v {input.tab} \
+        -o {params.outdir}/dramv-annotate --skip_trnascan \
+        --threads {threads} --min_contig_size {config[vs_min_length]}
+
+    ## summarize annotations
+    DRAM-v.py distill -i {params.outdir}/dramv-annotate/annotations.tsv \
+       -o {params.outdir}/dramv-distill
+
+    """
+
 
 ###### ALL RULE #############
 rule all:
     input: VS1ALL = expand(rules.vs1.output, sample=SAMPLES),
            CHECKVALL = expand(rules.checkv.output, sample=SAMPLES),
-           VS2ALL = expand(rules.vs4dramv.output.tab, sample=SAMPLES)
+           DRAMVALL = expand(rules.dramv.output, sample=SAMPLES)

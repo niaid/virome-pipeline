@@ -11,9 +11,15 @@ vs1:
   modules: virsorter/2.2.3-Python-3.8.10
 
 checkv:
+  h_vmem: 1G
   modules:
     - checkv/0.8.1
     - Python/2.7.15-foss-2018b
 
 vs4dramv:
   modules: virsorter/2.2.3-Python-3.8.10
+
+dramv:
+  h_vmem: 3G
+  modules:
+    - dram/1.4.6_ms
