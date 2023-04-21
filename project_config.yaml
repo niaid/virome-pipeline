@@ -14,7 +14,7 @@ outdir: virome_output
 # checkv database
 checkvdb: /hpcdata/bio_data/checkv/checkv-db-v1.5
 
-# min length for virsorter
+# min contig length for virsorter and dramv
 vs_min_length: 1000
 
 ### input files
@@ -23,5 +23,5 @@ assembly_suffix: .scaffolds.fasta
 
 # sample prefixes to be used throughout pipeline
 samples:
-  S105b
-  S105c
+  Sample1
+  Sample2
