@@ -25,9 +25,6 @@ mkdir -p ${outputdir}
 ## script dir
 scriptdir=$(grep "scriptdir" ${configfile} | awk '{ print $2 }')
 
-## ADD microbiome share modules for dramv for now until Locus installation catches up
-export MODULESPATH=$MODULESPATH:/hpcdata/bcbb/shared/microbiome_share/modules
-
 ## job submit command - can't use drmaa on locus :( - would have to ask them to install it...
 clustercmd="qsub -l h_vmem={cluster.h_vmem} -j y -pe threaded {cluster.threads} {cluster.extra} -o ${outputdir}/{cluster.log}"
 

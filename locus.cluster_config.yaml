@@ -22,4 +22,4 @@ vs4dramv:
 dramv:
   h_vmem: 3G
   modules:
-    - dram/1.4.6_ms
+    - /hpcdata/bcbb/shared/microbiome_share/modules/dram/1.4.6_ms
