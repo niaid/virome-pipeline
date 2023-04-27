@@ -1,4 +1,5 @@
 from os.path import join as pjoin
+import os
 import snakemake.utils as sm
 
 ### cluster config
@@ -112,7 +113,8 @@ rule dramv:
     input: fasta = rules.vs4dramv.output.fasta,
            tab = rules.vs4dramv.output.tab
     params: outdir = pjoin(SOUT, "dramv")
-    output: pjoin(SOUT, "dramv/dramv-distill/amg_summary.tsv")
+    output: summary = pjoin(SOUT, "dramv/dramv-distill/amg_summary.tsv"),
+            genes = pjoin(SOUT, "dramv/dramv-annotate/genes.faa")
     shell:"""
     ## DRAM-v annotation of viral sequences
     DRAM-setup.py version
@@ -134,8 +136,45 @@ rule dramv:
     """
 
 
+DIAMOND_DB_NAME=os.path.splitext(os.path.basename(config["diamonddb"]))[0]
+rule diamond:
+    threads: clust_conf["diamond"]["threads"]
+    envmodules: clust_conf["diamond"]["modules"]
+    input: rules.dramv.output.genes
+    output: pjoin(SOUT, "diamond/{sample}." + DIAMOND_DB_NAME + '.tsv')
+    params: outdir = pjoin(SOUT, "diamond"),
+            s = "{sample}",
+            tempdir = pjoin(clust_conf["diamond"]["tmpdir"], "{sample}_virome_diamond"),
+            dbname = DIAMOND_DB_NAME
+    shell:"""
+    ## align gene sequences found by DRAM-v/prodigal to a diamond database for
+    ## additional functional annotation
+    diamond --version
+
+    ## cleanup possible previous failed run
+    rm -rf {params.outdir}
+    mkdir -p {params.outdir}
+
+    ## https://github.com/bbuchfink/diamond/wiki/3.-Command-line-options#memory--performance-options
+    mkdir -p {params.tempdir}
+    trap 'rm -rvf {params.tempdir}' EXIT
+
+    diamond blastp --threads {threads} --max-target-seqs 2 -b 13 --tmpdir {params.tempdir} \
+            --query {input} --db {config[diamonddb]} \
+            --daa {params.outdir}/{params.s}.{params.dbname}.daa
+
+    diamond view --threads {threads} --outfmt 6 qseqid pident qcovhsp scovhsp length mismatch gapopen qstart qend sstart send evalue bitscore stitle -a {params.outdir}/{params.s}.{params.dbname}.daa -o {output}
+
+    ## add header to file
+    sed -i '1s;^;qseqid\\tpident\\tqcovhsp\\tscovhsp\\tlength\\tmismatch\\tgapopen\\tqstart\\tqend\\tsstart\\tsend\\tevalue\\tbitscore\\tstitle\\n;' {output}
+
+    """
+
+
+
 ###### ALL RULE #############
 rule all:
     input: VS1ALL = expand(rules.vs1.output, sample=SAMPLES),
            CHECKVALL = expand(rules.checkv.output, sample=SAMPLES),
-           DRAMVALL = expand(rules.dramv.output, sample=SAMPLES)
+           DRAMVALL = expand(rules.dramv.output.summary, sample=SAMPLES),
+           DIAMALL = expand(rules.diamond.output, sample=SAMPLES)

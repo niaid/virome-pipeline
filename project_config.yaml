@@ -11,11 +11,15 @@ indir: input
 outdir: virome_output
 
 ### rule-specific parameters that could change between projects
+
 # checkv database
 checkvdb: /hpcdata/bio_data/checkv/checkv-db-v1.5
 
 # min contig length for virsorter and dramv
 vs_min_length: 1000
+
+# diamond db to annotate genes for eventual pathway inference - we use nr
+diamonddb: /hpcdata/bcbb/shared/microbiome_share/dbs/diamond_nr/nr.diamond.dmnd
 
 ### input files
 # input files are expected to be like {indir}/{sample prefix}{assembly_suffix}

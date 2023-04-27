@@ -23,3 +23,10 @@ dramv:
   h_vmem: 3G
   modules:
     - /hpcdata/bcbb/shared/microbiome_share/modules/dram/1.4.6_ms
+
+diamond:
+  threads: 8
+  h_vmem: 12G
+  modules: diamond/2.0.15.153
+  tmpdir: /tmp
+  ## on Locus /tmp is on local disk but $TMPDIR is not and for diamond this matters
