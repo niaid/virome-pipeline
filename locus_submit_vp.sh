@@ -5,7 +5,7 @@
 #$ -l h_vmem=8G
 #$ -o .
 #$ -m e
-#$ -M your_address@niaid.nih.gov
+#$ -M your.email@niaid.nih.gov
 
 
 module load snakemake || exit 1

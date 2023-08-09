@@ -7,8 +7,8 @@ __default__:
     jobname: '{wildcards.sample}'
 
 
-vs1:
-  modules: virsorter/2.2.3-Python-3.8.10
+genomad:
+  modules: genomad/1.5.2
 
 checkv:
   h_vmem: 1G
@@ -16,13 +16,14 @@ checkv:
     - checkv/0.8.1
     - Python/2.7.15-foss-2018b
 
-vs4dramv:
-  modules: virsorter/2.2.3-Python-3.8.10
-
 dramv:
   h_vmem: 3G
   modules:
     - /hpcdata/bcbb/shared/microbiome_share/modules/dram/1.4.6_ms
+
+iphop:
+  modules:
+    - iphop/1.3.0
 
 diamond:
   threads: 8
