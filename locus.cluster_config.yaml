@@ -9,6 +9,8 @@ __default__:
 
 genomad:
   modules: genomad/1.5.2
+  ## python executable sometimes named python, sometimes python3 so we add option
+  python_exe: python3
 
 checkv:
   h_vmem: 1G

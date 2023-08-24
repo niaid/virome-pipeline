@@ -21,7 +21,7 @@ checkvdb: /hpcdata/bio_data/checkv/checkv-db-v1.5
 # min contig length for virsorter and dramv
 vs_min_length: 1000
 
-#iphop 
+#iphop
 iphopdb: /hpcdata/bio_data/iphop/Sept_2021_pub_rw/
 
 # diamond db to annotate genes for eventual pathway inference - we use nr
@@ -29,9 +29,8 @@ diamonddb: /hpcdata/bcbb/shared/microbiome_share/dbs/diamond_nr/nr.diamond.dmnd
 
 ### input files
 # input files are expected to be like {indir}/{sample prefix}{assembly_suffix}
+# change to what makes sense for your data
 assembly_suffix: .scaffolds.fasta
-
-## genomad output is automatically everything that comes before .fasta, so consider changing assembly suffix to .fasta and including other strings to sample name below - possibly a way around this but haven't figured it out yet. 
 
 # sample prefixes to be used throughout pipeline
 samples:

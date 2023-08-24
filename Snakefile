@@ -4,7 +4,7 @@ import snakemake.utils as sm
 
 ### cluster config
 scriptdir = config["scriptdir"] ## virome-pipeline repo/script directory
-include: pjoin(scriptdir, "cluster_setup.smk")
+include: pjoin(scriptdir, "scripts", "cluster_setup.smk")
 
 ############ project config #################
 
@@ -49,7 +49,9 @@ rule genomad:
     envmodules: clust_conf["genomad"]["modules"]
     input: fake = ancient(rules.createsampledir.output),
            assembly = pjoin(IN, "{sample}" + config["assembly_suffix"])
-    params: outdir = pjoin(SOUT, "genomad")
+    params: outdir = pjoin(SOUT, "genomad"),
+            genomad2gff = pjoin(scriptdir, "scripts", "genomad_genes2gff.py"),
+            python_exe = clust_conf["genomad"]["python_exe"]
     output: pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus.fna")
     shell:"""
     ## genomad search for viral contigs
@@ -59,8 +61,15 @@ rule genomad:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-    genomad end-to-end --cleanup {input.assembly} {params.outdir} {config[genomaddb]}
+    ## link assembly to name that works better for genomad
+    ln -s {input.assembly} {params.outdir}/{sample}.fasta
 
+    genomad end-to-end --cleanup {params.outdir}/{sample}.fasta {params.outdir} {config[genomaddb]}
+
+    ## make gff from final genes files
+    {params.python_exe} {params.genomad2gff} {params.outdir}/{sample}_summary/{sample}_virus_genes.tsv >{params.outdir}/{sample}_summary/{sample}_virus_genes.gff
+
+    rm {params.outdir}/{sample}.fasta
 
     """
 
@@ -107,14 +116,14 @@ rule dramv:
 rule iphop:
     threads: clust_conf["iphop"]["threads"]
     envmodules: *clust_conf["iphop"]["modules"]
-    input: fasta = rules.genomad.output 
+    input: fasta = rules.genomad.output
     params: outdir = pjoin(SOUT, "iphop")
     output: genes = pjoin(SOUT, "iphop/Host_prediction_to_genome_m90.csv")
 
     shell:"""
-    ## iphop for bacteriophage host calls 
+    ## iphop for bacteriophage host calls
     iphop --version
-   
+
 
     ## cleanup possible previous failed run
     rm -rf {params.outdir}
@@ -124,7 +133,7 @@ rule iphop:
 iphop predict --fa_file {input.fasta} --db_dir {config[iphopdb]} \
 	--out_dir {params.outdir} -t {threads}
 
-  
+
     """
 
 
