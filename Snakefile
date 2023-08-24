@@ -200,8 +200,8 @@ rule diamond:
 ###### ALL RULE #############
 rule all:
     input: GENOMADALL = expand(rules.genomad.output.gff, sample=SAMPLES),
-           # CHECKVALL = expand(rules.checkv.output, sample=SAMPLES),
-           # DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
-	   # IPHOPALL = expand(rules.iphop.output, sample=SAMPLES),
-           # DIAMALL = expand(rules.diamond.output, sample=SAMPLES),
+           CHECKVALL = expand(rules.checkv.output, sample=SAMPLES),
+           DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
+	   IPHOPALL = expand(rules.iphop.output, sample=SAMPLES),
+           DIAMALL = expand(rules.diamond.output, sample=SAMPLES),
            VERSEALL = expand(rules.verse.output, sample=SAMPLES)
