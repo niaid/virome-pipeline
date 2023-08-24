@@ -133,3 +133,6 @@ dmypy.json
 
 # mounted drives
 .__*
+
+# mac stuff
+.DS_Store
