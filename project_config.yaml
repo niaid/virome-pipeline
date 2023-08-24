@@ -33,6 +33,9 @@ diamonddb: /hpcdata/bcbb/shared/microbiome_share/dbs/diamond_nr/nr.diamond.dmnd
 # change to what makes sense for your data
 assembly_suffix: .scaffolds.fasta
 
+# {indir}/{sample prefix}{bam_suffix}
+bam_suffix: .bam
+
 # sample prefixes to be used throughout pipeline
 samples:
   Sample1
