@@ -44,24 +44,22 @@ rule createsampledir:
 
 ########## PIPELINE RULES ########
 
-rule vs1:
-    threads: clust_conf["vs1"]["threads"]
-    envmodules: clust_conf["vs1"]["modules"]
+rule genomad:
+    threads: clust_conf["genomad"]["threads"]
+    envmodules: clust_conf["genomad"]["modules"]
     input: fake = ancient(rules.createsampledir.output),
            assembly = pjoin(IN, "{sample}" + config["assembly_suffix"])
-    params: outdir = pjoin(SOUT, "vs1")
-    output: pjoin(SOUT, 'vs1/final-viral-combined.fa')
+    params: outdir = pjoin(SOUT, "genomad")
+    output: pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus.fna")
     shell:"""
-    ## virsorter first pass to id viral seqs in assemblies
-    virsorter --version
+    ## genomad search for viral contigs
+    genomad --version
 
     ## cleanup possible previous run
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-    virsorter run --keep-original-seq -i {input.assembly} \
-            -w {params.outdir} --include-groups dsDNAphage,ssDNA \
-            --min-length {config[vs_min_length]} --min-score 0.5 -j {threads} all
+    genomad end-to-end --cleanup {input.assembly} {params.outdir} {config[genomaddb]}
 
 
     """
@@ -69,7 +67,7 @@ rule vs1:
 rule checkv:
     threads: clust_conf["checkv"]["threads"]
     envmodules: *clust_conf["checkv"]["modules"]
-    input: rules.vs1.output
+    input: rules.genomad.output
     params: outdir = pjoin(SOUT, "checkv")
     output: pjoin(SOUT, "checkv", "combined.fna")
     shell:"""
@@ -85,36 +83,13 @@ rule checkv:
         >{params.outdir}/combined.fna
     """
 
-rule vs4dramv:
-    threads: clust_conf["vs4dramv"]["threads"]
-    envmodules: clust_conf["vs4dramv"]["modules"]
-    input: rules.checkv.output
-    params: outdir = pjoin(SOUT, "vs2")
-    output: fasta = pjoin(SOUT, "vs2/for-dramv/final-viral-combined-for-dramv.fa"),
-            tab = pjoin(SOUT, "vs2/for-dramv/viral-affi-contigs-for-dramv.tab")
-    shell:"""
-    ## run virsorter again to produce input for DRAM-v
-    virsorter --version
-
-    ## cleanup possible previous failed run
-    rm -rf {params.outdir}
-    mkdir -p {params.outdir}
-
-    virsorter run --seqname-suffix-off --viral-gene-enrich-off --provirus-off \
-        --prep-for-dramv -i {input} \
-        -w {params.outdir} --include-groups dsDNAphage,ssDNA --min-length {config[vs_min_length]} \
-        --min-score 0.5 -j {threads} all
-
-    """
-
 rule dramv:
     threads: clust_conf["dramv"]["threads"]
     envmodules: *clust_conf["dramv"]["modules"]
-    input: fasta = rules.vs4dramv.output.fasta,
-           tab = rules.vs4dramv.output.tab
+    input: fasta = rules.genomad.output
     params: outdir = pjoin(SOUT, "dramv")
-    output: summary = pjoin(SOUT, "dramv/dramv-distill/amg_summary.tsv"),
-            genes = pjoin(SOUT, "dramv/dramv-annotate/genes.faa")
+    output: genes = pjoin(SOUT, "dramv/dramv-annotate/genes.faa")
+
     shell:"""
     ## DRAM-v annotation of viral sequences
     DRAM-setup.py version
@@ -125,14 +100,31 @@ rule dramv:
     mkdir -p {params.outdir}
 
     DRAM-v.py annotate -i {input.fasta} \
-        -v {input.tab} \
         -o {params.outdir}/dramv-annotate --skip_trnascan \
         --threads {threads} --min_contig_size {config[vs_min_length]}
+    """
 
-    ## summarize annotations
-    DRAM-v.py distill -i {params.outdir}/dramv-annotate/annotations.tsv \
-       -o {params.outdir}/dramv-distill
+rule iphop:
+    threads: clust_conf["iphop"]["threads"]
+    envmodules: *clust_conf["iphop"]["modules"]
+    input: fasta = rules.genomad.output 
+    params: outdir = pjoin(SOUT, "iphop")
+    output: genes = pjoin(SOUT, "iphop/Host_prediction_to_genome_m90.csv")
 
+    shell:"""
+    ## iphop for bacteriophage host calls 
+    iphop --version
+   
+
+    ## cleanup possible previous failed run
+    rm -rf {params.outdir}
+    mkdir -p {params.outdir}
+
+
+iphop predict --fa_file {input.fasta} --db_dir {config[iphopdb]} \
+	--out_dir {params.outdir} -t {threads}
+
+  
     """
 
 
@@ -174,7 +166,8 @@ rule diamond:
 
 ###### ALL RULE #############
 rule all:
-    input: VS1ALL = expand(rules.vs1.output, sample=SAMPLES),
+    input: GENOMADALL = expand(rules.genomad.output, sample=SAMPLES),
            CHECKVALL = expand(rules.checkv.output, sample=SAMPLES),
-           DRAMVALL = expand(rules.dramv.output.summary, sample=SAMPLES),
+           DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
+	   IPHOPALL = expand(rules.iphop.output, sample=SAMPLES),
            DIAMALL = expand(rules.diamond.output, sample=SAMPLES)
