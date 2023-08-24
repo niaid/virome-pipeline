@@ -28,6 +28,7 @@ iphopdb: /hpcdata/bio_data/iphop/Sept_2021_pub_rw/
 diamonddb: /hpcdata/bcbb/shared/microbiome_share/dbs/diamond_nr/nr.diamond.dmnd
 
 ### input files
+
 # input files are expected to be like {indir}/{sample prefix}{assembly_suffix}
 # change to what makes sense for your data
 assembly_suffix: .scaffolds.fasta

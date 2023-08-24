@@ -9,8 +9,13 @@ __default__:
 
 genomad:
   modules: genomad/1.5.2
-  ## python executable sometimes named python, sometimes python3 so we add option
-  python_exe: python3
+
+verse:
+  threads: 8
+  modules:
+    - verse/0.1.5
+    - Python/3.7.3
+
 
 checkv:
   h_vmem: 1G

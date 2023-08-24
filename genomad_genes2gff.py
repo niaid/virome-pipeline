@@ -16,6 +16,10 @@ args = parser.parse_args()
 
 
 def strand_sign(n):
+    """
+    arg: strand value from genomad output
+    return +/- for positive/negative strand as required by gff3
+    """
     n = int(n)
     if (n<0):
         return('-')
@@ -23,6 +27,14 @@ def strand_sign(n):
 
 
 def make_gff(inputfile, plasmid=False):
+    """
+    Args:
+      inputfile: genomad *_genes.tsv file
+      plasmid: logical. is this a plasmid genes file? if so, Note=plasmid will be added to the gff attributes.
+
+    Return:
+      doesn't return anything.  prints to STDOUT
+    """
     with open(inputfile, 'r') as gf:
         gfreader = csv.DictReader(gf, delimiter="\t")
         for row in gfreader:

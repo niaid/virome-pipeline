@@ -4,7 +4,7 @@ import snakemake.utils as sm
 
 ### cluster config
 scriptdir = config["scriptdir"] ## virome-pipeline repo/script directory
-include: pjoin(scriptdir, "scripts", "cluster_setup.smk")
+include: pjoin(scriptdir, "cluster_setup.smk")
 
 ############ project config #################
 
@@ -50,9 +50,9 @@ rule genomad:
     input: fake = ancient(rules.createsampledir.output),
            assembly = pjoin(IN, "{sample}" + config["assembly_suffix"])
     params: outdir = pjoin(SOUT, "genomad"),
-            genomad2gff = pjoin(scriptdir, "scripts", "genomad_genes2gff.py"),
-            python_exe = clust_conf["genomad"]["python_exe"]
-    output: pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus.fna")
+            renamed_assembly = pjoin(SOUT, "genomad", "{sample}" + ".fasta")
+    output: fna = pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus.fna"),
+            gff = pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus_genes.gff")
     shell:"""
     ## genomad search for viral contigs
     genomad --version
@@ -61,26 +61,50 @@ rule genomad:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-    ## link assembly to name that works better for genomad
-    ln -s {input.assembly} {params.outdir}/{sample}.fasta
+    ## link assembly to sample.fasta so genomad uses sample as output file prefix
+    renamed_assembly=$(realpath {params.renamed_assembly})
+    ln -s $(realpath {input.assembly}) $renamed_assembly
 
-    genomad end-to-end --cleanup {params.outdir}/{sample}.fasta {params.outdir} {config[genomaddb]}
+    genomad end-to-end --cleanup --threads {threads} $renamed_assembly {params.outdir} {config[genomaddb]}
 
-    ## make gff from final genes files
-    {params.python_exe} {params.genomad2gff} {params.outdir}/{sample}_summary/{sample}_virus_genes.tsv >{params.outdir}/{sample}_summary/{sample}_virus_genes.gff
+    ## make gff from virus genes files
+    python3 {config[scriptdir]}/genomad_genes2gff.py {params.outdir}/{wildcards.sample}_summary/{wildcards.sample}_virus_genes.tsv >{output.gff}
 
-    rm {params.outdir}/{sample}.fasta
+    rm $renamed_assembly
+
+    """
+
+rule verse:
+    threads: clust_conf["verse"]["threads"]
+    envmodules: *clust_conf["verse"]["modules"]
+    input:  gff = rules.genomad.output.gff,
+            bam = ancient(pjoin(IN, "{sample}" + config["bam_suffix"]))
+    params: outdir = pjoin(SOUT, "verse"),
+            prefix = pjoin(SOUT, "verse", "{sample}_virus_genes.count"),
+            counts_only = pjoin(SOUT, "verse", "{sample}_virus_genes.count.CDS.txt")
+    output: pjoin(SOUT, "verse", "{sample}_virus_genes.count.CDS.cpm.txt")
+    shell:"""
+    ## estimate gene abundances with verse
+    verse -v
+
+    ## cleanup possible previous run
+    rm -rf {params.outdir}
+    mkdir -p {params.outdir}
+
+    verse -a {input.gff} -o {params.prefix} -g ID -z 1 -t CDS -l -T {threads} {input.bam}
+
+    python3 {config[scriptdir]}/calc_cpm.py {params.counts_only} >{output}
 
     """
 
 rule checkv:
     threads: clust_conf["checkv"]["threads"]
     envmodules: *clust_conf["checkv"]["modules"]
-    input: rules.genomad.output
+    input: rules.genomad.output.fna
     params: outdir = pjoin(SOUT, "checkv")
     output: pjoin(SOUT, "checkv", "combined.fna")
     shell:"""
-    ## run checkv to qc virsorter results and trim host regions left at the end of proviruses
+    ## run checkv to qc genomad results and trim host regions left at the end of proviruses
 
     ## cleanup possible previous run
     rm -rf {params.outdir}
@@ -95,7 +119,7 @@ rule checkv:
 rule dramv:
     threads: clust_conf["dramv"]["threads"]
     envmodules: *clust_conf["dramv"]["modules"]
-    input: fasta = rules.genomad.output
+    input: fasta = rules.genomad.output.fna
     params: outdir = pjoin(SOUT, "dramv")
     output: genes = pjoin(SOUT, "dramv/dramv-annotate/genes.faa")
 
@@ -116,7 +140,7 @@ rule dramv:
 rule iphop:
     threads: clust_conf["iphop"]["threads"]
     envmodules: *clust_conf["iphop"]["modules"]
-    input: fasta = rules.genomad.output
+    input: fasta = rules.genomad.output.fna
     params: outdir = pjoin(SOUT, "iphop")
     output: genes = pjoin(SOUT, "iphop/Host_prediction_to_genome_m90.csv")
 
@@ -175,8 +199,9 @@ rule diamond:
 
 ###### ALL RULE #############
 rule all:
-    input: GENOMADALL = expand(rules.genomad.output, sample=SAMPLES),
-           CHECKVALL = expand(rules.checkv.output, sample=SAMPLES),
-           DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
-	   IPHOPALL = expand(rules.iphop.output, sample=SAMPLES),
-           DIAMALL = expand(rules.diamond.output, sample=SAMPLES)
+    input: GENOMADALL = expand(rules.genomad.output.gff, sample=SAMPLES),
+           # CHECKVALL = expand(rules.checkv.output, sample=SAMPLES),
+           # DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
+	   # IPHOPALL = expand(rules.iphop.output, sample=SAMPLES),
+           # DIAMALL = expand(rules.diamond.output, sample=SAMPLES),
+           VERSEALL = expand(rules.verse.output, sample=SAMPLES)
