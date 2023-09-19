@@ -23,6 +23,12 @@ checkv:
     - checkv/0.8.1
     - Python/2.7.15-foss-2018b
 
+vsearch:
+  h_vmem: 4G
+  modules: vsearch/2.22.1
+  log: 'logs'
+  jobname: 'all'
+
 dramv:
   h_vmem: 3G
   modules:
