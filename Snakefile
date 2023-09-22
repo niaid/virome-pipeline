@@ -132,7 +132,7 @@ rule checkv:
 rule vsearch:
     threads: clust_conf["vsearch"]["threads"]
     envmodules: clust_conf["vsearch"]["modules"]
-    input: expand(rules.genomad.output.fna, sample=SAMPLES)
+    input: expand(rules.checkv.output, sample=SAMPLES)
     params: outdir = pjoin(OUT, "vsearch"),
             input_ctgs = pjoin(OUT, "vsearch", "all_input_contigs.fasta")
     output: info = pjoin(OUT, "vsearch", "info.txt"),
