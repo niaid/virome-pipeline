@@ -52,7 +52,8 @@ rule genomad:
     params: outdir = pjoin(SOUT, "genomad"),
             renamed_assembly = pjoin(SOUT, "genomad", "{sample}" + ".fasta")
     output: fna = pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus.fna"),
-            gff = pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus_genes.gff")
+            gff = pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus_genes.gff"),
+            assembly_headermap = pjoin(SOUT, "genomad", "{sample}" + "_assembly_headermap.txt")
     shell:"""
     ## genomad search for viral contigs
     genomad --version
@@ -61,10 +62,20 @@ rule genomad:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-    ## link assembly to sample.fasta so genomad uses sample as output file prefix
+    ## rename assembly to sample.fasta so genomad uses sample as output file prefix
+    ## also rename headers to include sample name, so we can track contigs when we combine all for clustering
     renamed_assembly=$(realpath {params.renamed_assembly})
-    ln -s $(realpath {input.assembly}) $renamed_assembly
 
+    sed '/^>/ s!\([^ ]*\)!\\1_{wildcards.sample}!' < {input.assembly} >$renamed_assembly
+
+    grep -e "^>" {input.assembly} | sed -r 's/^.{{1}}//' >{params.outdir}/oldheaders.txt
+    grep -e "^>" $renamed_assembly | sed -r 's/^.{{1}}//' >{params.outdir}/newheaders.txt
+    paste {params.outdir}/oldheaders.txt {params.outdir}/newheaders.txt >{output.assembly_headermap}
+    rm {params.outdir}/oldheaders.txt
+    rm {params.outdir}/newheaders.txt
+
+
+    ## run genomad
     genomad end-to-end --cleanup --threads {threads} $renamed_assembly {params.outdir} {config[genomaddb]}
 
     ## make gff from virus genes files
