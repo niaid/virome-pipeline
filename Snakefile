@@ -15,11 +15,11 @@ SOUT = pjoin(OUT, "{sample}") ## subdirectory for each sample's output (includin
 LOGS = pjoin(OUT, "logs") ## log directory for logfiles of rules involving more than one sample
 IN = config["indir"] ## directory storing all assemblies/input
 
+
 ## inputs
 SAMPLES = list(config["samples"].split())
 if SAMPLES is None:
     sys.exit("Sample prefixes are needed")
-
 
 ################ RULES ###########################
 onerror:
@@ -116,6 +116,34 @@ rule checkv:
         >{params.outdir}/combined.fna
     """
 
+rule vsearch:
+    threads: clust_conf["vsearch"]["threads"]
+    envmodules: clust_conf["vsearch"]["modules"]
+    input: expand(rules.genomad.output.fna, sample=SAMPLES)
+    params: outdir = pjoin(OUT, "vsearch"),
+            input_ctgs = pjoin(OUT, "vsearch", "all_input_contigs.fasta")
+    output: info = pjoin(OUT, "vsearch", "info.txt"),
+            consensus = pjoin(OUT, "vsearch", "consensus_sequences.fasta")
+    shell:"""
+    ## run vsearch on all contigs to remove duplicates
+
+    ## cleanup possible previous failed run
+    rm -rf {params.outdir}
+    mkdir -p {params.outdir}
+
+    cat {input} >{params.input_ctgs}
+
+    vsearch --cluster_size {params.input_ctgs} --id 0.95 --consout {output.consensus} \
+      --clusterout_id --maxseqlength 500000 --threads 16 --iddef 0 --minseqlength 5000 \
+      --uc {output.info}
+
+
+    ## cleanup remove contigs to save space
+    rm {params.input_ctgs}
+
+    """
+
+
 rule dramv:
     threads: clust_conf["dramv"]["threads"]
     envmodules: *clust_conf["dramv"]["modules"]
@@ -154,7 +182,7 @@ rule iphop:
     mkdir -p {params.outdir}
 
 
-iphop predict --fa_file {input.fasta} --db_dir {config[iphopdb]} \
+    iphop predict --fa_file {input.fasta} --db_dir {config[iphopdb]} \
 	--out_dir {params.outdir} -t {threads}
 
 
@@ -204,4 +232,5 @@ rule all:
            DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
 	   IPHOPALL = expand(rules.iphop.output, sample=SAMPLES),
            DIAMALL = expand(rules.diamond.output, sample=SAMPLES),
-           VERSEALL = expand(rules.verse.output, sample=SAMPLES)
+           VERSEALL = expand(rules.verse.output, sample=SAMPLES),
+           VSEARCHALL = rules.vsearch.output.info
