@@ -68,7 +68,7 @@ rule genomad:
     genomad end-to-end --cleanup --threads {threads} $renamed_assembly {params.outdir} {config[genomaddb]}
 
     ## make gff from virus genes files
-    python3 {config[scriptdir]}/genomad_genes2gff.py {params.outdir}/{wildcards.sample}_summary/{wildcards.sample}_virus_genes.tsv >{output.gff}
+    python3 {config[scriptdir]}/scripts/genomad_genes2gff.py {params.outdir}/{wildcards.sample}_summary/{wildcards.sample}_virus_genes.tsv >{output.gff}
 
     rm $renamed_assembly
 
@@ -93,7 +93,7 @@ rule verse:
 
     verse -a {input.gff} -o {params.prefix} -g ID -z 1 -t CDS -l -T {threads} {input.bam}
 
-    python3 {config[scriptdir]}/calc_cpm.py {params.counts_only} >{output}
+    python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only} >{output}
 
     """
 
@@ -114,6 +114,8 @@ rule checkv:
 
     cat {params.outdir}/proviruses.fna {params.outdir}/viruses.fna \
         >{params.outdir}/combined.fna
+
+
     """
 
 rule dramv:
