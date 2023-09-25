@@ -135,8 +135,12 @@ rule vsearch:
     input: expand(rules.checkv.output, sample=SAMPLES)
     params: outdir = pjoin(OUT, "vsearch"),
             input_ctgs = pjoin(OUT, "vsearch", "all_input_contigs.fasta")
-    output: info = pjoin(OUT, "vsearch", "info.txt"),
-            consensus = pjoin(OUT, "vsearch", "consensus_sequences.fasta")
+    output: centroids = pjoin(OUT, "vsearch", "centroids.fasta"),
+            clusters = pjoin(OUT, "vsearch", "clusters.fasta"),
+            log = pjoin(OUT, "vsearch", "log.txt"),
+            blastout = pjoin(OUT, "vsearch", "blast6out.txt")
+	 
+
     shell:"""
     ## run vsearch on all contigs to remove duplicates
 
@@ -146,16 +150,45 @@ rule vsearch:
 
     cat {input} >{params.input_ctgs}
 
-    vsearch --cluster_size {params.input_ctgs} --id 0.95 --consout {output.consensus} \
+    vsearch --cluster_fast {params.input_ctgs} --id 1 --centroids {output.centroids} \
       --clusterout_id --maxseqlength 500000 --threads 16 --iddef 0 --minseqlength 5000 \
-      --uc {output.info}
+      --relabel_keep --log {output.log} --blast6out {output.blastout} \
+      --clusters {output.clusters}
 
-
-    ## cleanup remove contigs to save space
-    rm {params.input_ctgs}
 
     """
 
+rule mmseqs:
+    threads: clust_conf["mmseqs"]["threads"]
+    envmodules: clust_conf["mmseqs"]["modules"]
+    input: rules.vsearch.output.centroids
+    params: outdir = pjoin(OUT, "mmseqs"),
+            DB = pjoin(OUT, "mmseqs", "DB"),
+	    DB_clu = pjoin(OUT, "mmseqs", "DB_clu"),
+	    table = pjoin(OUT, "mmseqs", "DB_clu.tsv"),
+	    seqfiledb = pjoin(OUT, "mmseqs", "DB_clu_seq")
+    output: repseqs = pjoin(OUT, "mmseqs", "repseqs.fasta")
+	    
+
+    shell:"""
+    ## run mmseqs on all derepped genomes 
+
+    ## cleanup possible previous failed run
+    rm -rf {params.outdir}
+    mkdir -p {params.outdir}
+
+    mmseqs createdb {input} {params.DB}
+
+    mmseqs cluster {params.DB} {params.DB_clu} tmp --cov-mode 1 -c 0.85 --min-seq-id 0.95 --cluster-mode 2
+
+    mmseqs createtsv {params.DB} {params.DB} {params.DB_clu} {params.table}
+
+    mmseqs createseqfiledb {params.DB} {params.DB_clu} {params.seqfiledb}
+
+    mmseqs result2flat {params.DB} {params.DB} {params.seqfiledb} {output.repseqs}
+
+
+    """
 
 rule dramv:
     threads: clust_conf["dramv"]["threads"]
@@ -246,4 +279,5 @@ rule all:
 	   IPHOPALL = expand(rules.iphop.output, sample=SAMPLES),
            DIAMALL = expand(rules.diamond.output, sample=SAMPLES),
            VERSEALL = expand(rules.verse.output, sample=SAMPLES),
-           VSEARCHALL = rules.vsearch.output.info
+           VSEARCHALL = rules.vsearch.output.centroids,
+	   MMSEQSALL = rules.mmseqs.output.repseqs
