@@ -134,12 +134,14 @@ rule vsearch:
     envmodules: clust_conf["vsearch"]["modules"]
     input: expand(rules.checkv.output, sample=SAMPLES)
     params: outdir = pjoin(OUT, "vsearch"),
-            input_ctgs = pjoin(OUT, "vsearch", "all_input_contigs.fasta")
-    output: centroids = pjoin(OUT, "vsearch", "centroids.fasta"),
-            clusters = pjoin(OUT, "vsearch", "clusters.fasta"),
-            log = pjoin(OUT, "vsearch", "log.txt"),
-            blastout = pjoin(OUT, "vsearch", "blast6out.txt")
-	 
+            input_ctgs = pjoin(OUT, "vsearch", "all_input_contigs.fasta"),
+	    log = pjoin(OUT, "vsearch", "log.txt"),
+            blastout = pjoin(OUT, "vsearch", "blast6out.txt"),
+	    clusters = pjoin(OUT, "vsearch", "clusters.fasta")
+    output: centroids = pjoin(OUT, "vsearch", "centroids.fasta")
+
+            
+
 
     shell:"""
     ## run vsearch on all contigs to remove duplicates
@@ -152,8 +154,8 @@ rule vsearch:
 
     vsearch --cluster_fast {params.input_ctgs} --id 1 --centroids {output.centroids} \
       --clusterout_id --maxseqlength 500000 --threads 16 --iddef 0 --minseqlength 5000 \
-      --relabel_keep --log {output.log} --blast6out {output.blastout} \
-      --clusters {output.clusters}
+      --relabel_keep --log {params.log} --blast6out {params.blastout} \
+      --clusters {params.clusters} --strand both
 
 
     """
@@ -165,9 +167,11 @@ rule mmseqs:
     params: outdir = pjoin(OUT, "mmseqs"),
             DB = pjoin(OUT, "mmseqs", "DB"),
 	    DB_clu = pjoin(OUT, "mmseqs", "DB_clu"),
-	    table = pjoin(OUT, "mmseqs", "DB_clu.tsv"),
-	    seqfiledb = pjoin(OUT, "mmseqs", "DB_clu_seq")
-    output: repseqs = pjoin(OUT, "mmseqs", "repseqs.fasta")
+	    DB_clu_tsv = pjoin(OUT, "mmseqs", "DB_clu.tsv"),
+	    DB_clu_seq = pjoin(OUT, "mmseqs", "DB_clu_seq"),
+	    DB_clu_fasta = pjoin(OUT, "mmseqs", "cluster_seqs.fasta"),
+	    DB_clu_rep = pjoin(OUT, "mmseqs", "DB_clu_rep")
+    output: DB_clu_rep_fasta = pjoin(OUT, "mmseqs", "representative_seqs.fasta")
 	    
 
     shell:"""
@@ -179,13 +183,18 @@ rule mmseqs:
 
     mmseqs createdb {input} {params.DB}
 
-    mmseqs cluster {params.DB} {params.DB_clu} tmp --cov-mode 1 -c 0.85 --min-seq-id 0.95 --cluster-mode 2
+    mmseqs cluster {params.DB} {params.DB_clu} tmp --cov-mode 1 -c 0.85 \
+	--min-seq-id 0.95 --cluster-mode 2
 
-    mmseqs createtsv {params.DB} {params.DB} {params.DB_clu} {params.table}
+    mmseqs createtsv {params.DB} {params.DB} {params.DB_clu} {params.DB_clu_tsv}
 
-    mmseqs createseqfiledb {params.DB} {params.DB_clu} {params.seqfiledb}
+    mmseqs createseqfiledb {params.DB} {params.DB_clu} {params.DB_clu_seq}
 
-    mmseqs result2flat {params.DB} {params.DB} {params.seqfiledb} {output.repseqs}
+    mmseqs result2flat {params.DB} {params.DB} {params.DB_clu_seq} {params.DB_clu_fasta}
+
+    mmseqs createsubdb {params.DB_clu} {params.DB} {params.DB_clu_rep}
+
+    mmseqs convert2fasta {params.DB_clu_rep} {output.DB_clu_rep_fasta}
 
 
     """
@@ -280,4 +289,4 @@ rule all:
            DIAMALL = expand(rules.diamond.output, sample=SAMPLES),
            VERSEALL = expand(rules.verse.output, sample=SAMPLES),
            VSEARCHALL = rules.vsearch.output.centroids,
-	   MMSEQSALL = rules.mmseqs.output.repseqs
+	   MMSEQSALL = rules.mmseqs.output.DB_clu_rep_fasta
