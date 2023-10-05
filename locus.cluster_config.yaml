@@ -16,17 +16,16 @@ verse:
     - verse/0.1.5
     - Python/3.7.3
 
-
 checkv:
   h_vmem: 1G
   modules:
     - checkv/0.8.1
     - Python/2.7.15-foss-2018b
 
-vsearch:
-  h_vmem: 4G
-  modules: vsearch/2.22.1
-  log: 'vsearch_log'
+bbmap:
+  h_vmem: 8G
+  modules: bbmap/38.90
+  log: 'bbmap_log'
   jobname: 'all'
 
 mmseqs: 
