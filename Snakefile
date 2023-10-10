@@ -151,8 +151,8 @@ rule bbmap:
 
     cat {input} >{params.input_ctgs}
 
-    dedupe.sh in={params.input.ctgs} out={output.unique_seqs} outd={params.stats} minscaf=5000 \
-	fo=t mergenames=t ex=f
+    dedupe.sh in={params.input_ctgs} out={output.unique_seqs} csf={params.stats} minscaf=5000 \
+	mergenames=t ex=f mergedelimiter=|
 
 
     """
