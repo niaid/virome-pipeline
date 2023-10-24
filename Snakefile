@@ -129,22 +129,21 @@ rule checkv:
 
     """
 
-rule vsearch:
-    threads: clust_conf["vsearch"]["threads"]
-    envmodules: clust_conf["vsearch"]["modules"]
+rule bbmap:
+    threads: clust_conf["bbmap"]["threads"]
+    envmodules: clust_conf["bbmap"]["modules"]
     input: expand(rules.checkv.output, sample=SAMPLES)
-    params: outdir = pjoin(OUT, "vsearch"),
-            input_ctgs = pjoin(OUT, "vsearch", "all_input_contigs.fasta"),
-	    log = pjoin(OUT, "vsearch", "log.txt"),
-            blastout = pjoin(OUT, "vsearch", "blast6out.txt"),
-	    clusters = pjoin(OUT, "vsearch", "clusters.fasta")
-    output: centroids = pjoin(OUT, "vsearch", "centroids.fasta")
+    params: outdir = pjoin(OUT, "bbmap"),
+            input_ctgs = pjoin(OUT, "bbmap", "all_input_contigs.fasta"),
+	    log = pjoin(OUT, "bbmap", "log.txt"),
+	    stats = pjoin(OUT, "bbmap", "cluster_stats.txt")
+    output: unique_seqs = pjoin(OUT, "bbmap", "unique_seqs.fasta")
 
             
 
 
     shell:"""
-    ## run vsearch on all contigs to remove duplicates
+    ## run bbmap on all contigs to remove duplicates
 
     ## cleanup possible previous failed run
     rm -rf {params.outdir}
@@ -152,10 +151,8 @@ rule vsearch:
 
     cat {input} >{params.input_ctgs}
 
-    vsearch --cluster_fast {params.input_ctgs} --id 1 --centroids {output.centroids} \
-      --clusterout_id --maxseqlength 500000 --threads 16 --iddef 0 --minseqlength 5000 \
-      --relabel_keep --log {params.log} --blast6out {params.blastout} \
-      --clusters {params.clusters} --strand both
+    dedupe.sh in={params.input_ctgs} out={output.unique_seqs} csf={params.stats} minscaf=5000 \
+	mergenames=t ex=f mergedelimiter=|
 
 
     """
@@ -163,7 +160,7 @@ rule vsearch:
 rule mmseqs:
     threads: clust_conf["mmseqs"]["threads"]
     envmodules: clust_conf["mmseqs"]["modules"]
-    input: rules.vsearch.output.centroids
+    input: rules.bbmap.output.unique_seqs
     params: outdir = pjoin(OUT, "mmseqs"),
             DB = pjoin(OUT, "mmseqs", "DB"),
 	    DB_clu = pjoin(OUT, "mmseqs", "DB_clu"),
@@ -175,7 +172,7 @@ rule mmseqs:
 	    
 
     shell:"""
-    ## run mmseqs on all derepped genomes 
+    ## run mmseqs on all deduped genomes 
 
     ## cleanup possible previous failed run
     rm -rf {params.outdir}
@@ -288,5 +285,5 @@ rule all:
 	   IPHOPALL = expand(rules.iphop.output, sample=SAMPLES),
            DIAMALL = expand(rules.diamond.output, sample=SAMPLES),
            VERSEALL = expand(rules.verse.output, sample=SAMPLES),
-           VSEARCHALL = rules.vsearch.output.centroids,
+           BBMAPALL = rules.bbmap.output.unique_seqs,
 	   MMSEQSALL = rules.mmseqs.output.DB_clu_rep_fasta
