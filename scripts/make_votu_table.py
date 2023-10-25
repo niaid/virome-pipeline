@@ -27,7 +27,7 @@ def read_abund(abundfile, mmseqs, value, sfx=""):
     a = a.merge(mmseqs, how='inner', left_on = 'gene', right_on = 'seq')
     a = a[['repseq', value]]
     samplename = abundfile.split("/")[-1]
-    a['sample'] = samplename.removesuffix("_virus.count.CDS.cpm.txt")
+    a['sample'] = samplename.removesuffix(sfx)
     return(a)
 
 
