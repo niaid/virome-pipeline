@@ -26,7 +26,6 @@ onerror:
      print("An error occurred in the virome pipeline.")
      shell("mail -s 'Error in virome pipeline.' {config[email]} < {log}")
 
-localrules: all, createsampledir
 localrules: all, createsampledir, createlogdir
 
 
@@ -63,7 +62,7 @@ rule genomad:
     output: fna = pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus.fna"),
             genes = pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus_genes.tsv"),
             proteins =  pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus_proteins.faa"),
-            summary = pjoint(SOUT, "genomad", "{sample}_summary","{sample}_virus_summary.tsv"),
+            summary = pjoin(SOUT, "genomad", "{sample}_summary","{sample}_virus_summary.tsv"),
             assembly_headermap = pjoin(SOUT, "genomad", "{sample}" + "_assembly_headermap.txt")
     shell:"""
     ## genomad search for viral contigs
@@ -99,7 +98,7 @@ rule verse_genomad:
     input:  genes = rules.genomad.output.genes,
             fna = rules.genomad.output.fna,
             virus = rules.genomad.output.summary,
-            headermap = rules.genomad.output.assembly_headermap
+            headermap = rules.genomad.output.assembly_headermap,
             bam = ancient(pjoin(IN, "{sample}" + config["bam_suffix"]))
     params: outdir = pjoin(SOUT, "verse_genomad"),
             prefix_genes = pjoin(SOUT, "verse_genomad", "{sample}_virus_genes.count"),
@@ -157,7 +156,8 @@ rule checkv:
 rule bbmap:
     threads: clust_conf["bbmap"]["threads"]
     envmodules: clust_conf["bbmap"]["modules"]
-    input: expand(rules.checkv.output.fna, sample=SAMPLES)
+    input: fna = expand(rules.checkv.output.fna, sample=SAMPLES),
+           fake = ancient(rules.createlogdir.output)
     params: outdir = pjoin(OUT, "bbmap"),
             input_ctgs = pjoin(OUT, "bbmap", "all_input_contigs.fasta"),
 	    log = pjoin(OUT, "bbmap", "log.txt"),
@@ -170,7 +170,7 @@ rule bbmap:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-    cat {input} >{params.input_ctgs}
+    cat {input.fna} >{params.input_ctgs}
 
     dedupe.sh in={params.input_ctgs} out={output.unique_seqs} csf={params.stats} minscaf=5000 \
 	mergenames=t ex=f usejni=t threads={threads}
@@ -229,13 +229,17 @@ rule votu:
     threads: clust_conf["votu"]["threads"]
     envmodules: clust_conf["votu"]["modules"]
     input: mmseqs = rules.mmseqs.output.flat_DB_clu_tsv,
-           abund = expand(rules.genomad.output.readcounts_virus, sample=SAMPLES)
+           abund = expand(rules.verse_genomad.output.readcounts_virus, sample=SAMPLES)
     params: outdir = pjoin(OUT, "votu"),
-            filelist = pjoin(OUT, "abundfiles.txt")
+            filelist = pjoin(OUT, "votu", "abundfiles.txt")
     output: pjoin(OUT, "votu", "vOTU_table.tsv")
     shell:"""
+    ## cleanup possible previous failed run
+    rm -rf {params.outdir}
+    mkdir -p {params.outdir}
+
     echo "{input.abund}" >{params.filelist}
-    tr " " "\n" {params.filelist} >{params.outdir}/temp && mv {params.outdir}/temp {params.filelist}
+    tr " " "\\n" <{params.filelist} >{params.outdir}/temp && mv {params.outdir}/temp {params.filelist}
     python3 {config[scriptdir]}/scripts/make_votu_table.py {input.mmseqs} {params.filelist} >{output}
 
 
@@ -286,13 +290,16 @@ rule iphop:
 
     """
 
+if "diamonddb" in config:
+    DIAMOND_DB_NAME=os.path.splitext(os.path.basename(config["diamonddb"]))[0]
+else:
+    DIAMOND_DB_NAME=None
 
-DIAMOND_DB_NAME=os.path.splitext(os.path.basename(config["diamonddb"]))[0]
 rule diamond:
     threads: clust_conf["diamond"]["threads"]
     envmodules: clust_conf["diamond"]["modules"]
     input: rules.genomad.output.proteins
-    output: pjoin(SOUT, "diamond/{sample}." + DIAMOND_DB_NAME + '.tsv')
+    output: pjoin(SOUT, "diamond/{sample}." + DIAMOND_DB_NAME + '.tsv') if DIAMOND_DB_NAME else "temp.txt"
     params: outdir = pjoin(SOUT, "diamond"),
             s = "{sample}",
             tempdir = pjoin(clust_conf["diamond"]["tmpdir"], "{sample}_virome_diamond"),
@@ -325,11 +332,12 @@ rule diamond:
 
 ###### ALL RULE #############
 rule all:
-    input: GENOMADALL = expand(rules.genomad.output.gff, sample=SAMPLES),
+    input: GENOMADALL = expand(rules.genomad.output.fna, sample=SAMPLES),
            CHECKVALL = expand(rules.checkv.output, sample=SAMPLES),
-           DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
-	   IPHOPALL = expand(rules.iphop.output, sample=SAMPLES),
-           DIAMALL = expand(rules.diamond.output, sample=SAMPLES),
-           VERSEGALL = expand(rules.verse_genomad.output, sample=SAMPLES),
+           VERSEGALL = expand(rules.verse_genomad.output.readcounts_virus, sample=SAMPLES),
            BBMAPALL = rules.bbmap.output.unique_seqs,
-	   MMSEQSALL = rules.mmseqs.output.DB_clu_rep_fasta
+	   MMSEQSALL = rules.mmseqs.output.DB_clu_rep_fasta,
+           DIAMALL = expand(rules.diamond.output, sample=SAMPLES) if DIAMOND_DB_NAME else [],
+           VOTUALL = rules.votu.output,
+           DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
+	   IPHOPALL = expand(rules.iphop.output, sample=SAMPLES)
