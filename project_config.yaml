@@ -25,6 +25,7 @@ vs_min_length: 1000
 iphopdb: /hpcdata/bio_data/iphop/Sept_2021_pub_rw/
 
 # diamond db to annotate genes for eventual pathway inference - we use nr
+# to skip running diamond (which can take a long time) comment this line out (put # in front)
 diamonddb: /hpcdata/bcbb/shared/microbiome_share/dbs/diamond_nr/nr.diamond.dmnd
 
 ### input files
