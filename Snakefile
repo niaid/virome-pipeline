@@ -364,6 +364,6 @@ rule all:
            BBMAPALL = rules.bbmap.output.unique_seqs,
 	   MMSEQSALL = rules.mmseqs.output.DB_clu_rep_fasta,
            DIAMALL = expand(rules.diamond.output, sample=SAMPLES) if DIAMOND_DB_NAME else [],
-           VOTUALL = rules.votu.output
-           # DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
-	   # IPHOPALL = expand(rules.iphop.output, sample=SAMPLES)
+           VOTUALL = rules.votu.output,
+           DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
+	   IPHOPALL = expand(rules.iphop.output, sample=SAMPLES)
