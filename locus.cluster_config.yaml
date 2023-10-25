@@ -23,23 +23,27 @@ checkv:
     - Python/2.7.15-foss-2018b
 
 bbmap:
+  threads: 4
   h_vmem: 8G
   modules: bbmap/38.90
-  log: 'bbmap.log'
+  log: 'logs'
   jobname: 'all'
 
 mmseqs:
-  h_vmem: 15G
+  threads: 8
+  h_vmem: 5G
   modules:
     - mmseqs2/14.7e284
     - Python/3.9.5-GCCcore-10.3.0
-  log: 'mmseqs.log'
+  log: 'logs'
   jobname: 'all'
 
 votu:
   threads: 2
   h_vmem: 4G
   modules: Python/3.9.5-GCCcore-10.3.0
+  log: 'logs'
+  jobname: 'all'
 
 dramv:
   h_vmem: 3G

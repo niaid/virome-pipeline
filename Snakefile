@@ -27,6 +27,7 @@ onerror:
      shell("mail -s 'Error in virome pipeline.' {config[email]} < {log}")
 
 localrules: all, createsampledir
+localrules: all, createsampledir, createlogdir
 
 
 ####### SETUP RULES #######
@@ -40,6 +41,14 @@ rule createsampledir:
     touch {output}
     """
 
+rule createlogdir:
+    """setup log directory for rules which collate all sample results"""
+    output: pjoin(OUT, "logs/snakefake")
+    params: outdir = OUT
+    shell:"""
+    mkdir -p {params.outdir}/logs
+    touch {output}
+    """
 
 
 ########## PIPELINE RULES ########
