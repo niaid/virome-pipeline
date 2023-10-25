@@ -16,15 +16,6 @@ parser.add_argument("-m", "--headermap", help="genomad *_assembly_headermap.txt 
 args = parser.parse_args()
 
 
-def strand_sign(n):
-    """
-    arg: strand value from genomad output
-    return +/- for positive/negative strand as required by gff3
-    """
-    n = int(n)
-    if (n<0):
-        return('-')
-    return('+')
 
 def read_headermap(headermap):
     hmap = {}
