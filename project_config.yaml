@@ -17,8 +17,12 @@ genomaddb: /hpcdata/bio_data/genomad/genomad_db/
 
 # checkv database
 checkvdb: /hpcdata/bio_data/checkv/checkv-db-v1.5
+# checkv quality sequences to use for clustering vOTUs
+# options are all, medium, high, complete
+checkv_q: all
 
-# min contig length for virsorter and dramv
+
+# min contig length for dramv and vOTU clustering
 vs_min_length: 1000
 
 #iphop

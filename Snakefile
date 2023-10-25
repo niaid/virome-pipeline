@@ -26,7 +26,7 @@ onerror:
      print("An error occurred in the virome pipeline.")
      shell("mail -s 'Error in virome pipeline.' {config[email]} < {log}")
 
-localrules: all, createsampledir, createlogdir
+localrules: all, createsampledir
 
 
 ####### SETUP RULES #######
@@ -35,15 +35,6 @@ rule createsampledir:
     """setup output directories"""
     output: pjoin(SOUT, "logs/snakefake")
     params: outdir = SOUT
-    shell:"""
-    mkdir -p {params.outdir}/logs
-    touch {output}
-    """
-
-rule createlogdir:
-    """setup log directory for rules which collate all sample results"""
-    output: pjoin(OUT, "logs/snakefake")
-    params: outdir = OUT
     shell:"""
     mkdir -p {params.outdir}/logs
     touch {output}
@@ -136,7 +127,7 @@ rule checkv:
     input: rules.genomad.output.fna
     params: outdir = pjoin(SOUT, "checkv")
     output: fna = pjoin(SOUT, "checkv", "combined.fna"),
-            contam = pjoin(SOUT, "checkv", "contamination.tsv")
+            qsum = pjoin(SOUT, "checkv", "quality_summary.tsv")
     shell:"""
     ## run checkv to qc genomad results and trim host regions left at the end of proviruses
 
@@ -146,18 +137,56 @@ rule checkv:
 
     checkv end_to_end {input} {params.outdir} -d {config[checkvdb]} -t {threads}
 
-    cat {params.outdir}/proviruses.fna {params.outdir}/viruses.fna \
-        >{params.outdir}/combined.fna
-
+    cat {params.outdir}/proviruses.fna {params.outdir}/viruses.fna >{output.fna}
 
     """
+
+def checkv_q_validate(checkv_q):
+    """return grep string for filtering checkv contigs"""
+    if checkv_q not in ['all', 'medium', 'high', 'complete']:
+        raise ValueError(f"checkv_q value in config is '{checkv_q}'.  Should be one of 'all', 'medium', 'high', 'complete'. Exiting.")
+    return(checkv_q)
+
+
+rule checkv_filter:
+    threads: clust_conf["checkv_filter"]["threads"]
+    envmodules: clust_conf["checkv_filter"]["modules"]
+    input: fna = rules.genomad.output.fna,
+           qsum = rules.checkv.output.qsum
+    params: outdir = pjoin(SOUT, "checkv"),
+            checkv_q = checkv_q_validate(config["checkv_q"]),
+            tempclist = pjoin(SOUT, "checkv", "tempclist.txt")
+    output: pjoin(SOUT, "checkv", "checkv_filtered_genomad_viruses.fna")
+    shell:"""
+    ## use checkv quality assessment to filter viral contigs for clustering
+
+    ## cleanup possible previous run
+    rm -rf {output}
+
+
+    if [ "{params.checkv_q}" = "complete" ]; then
+       grep -e "Complete" {input.qsum} | awk '{{ print $1 }}' >{params.tempclist}
+    elif [ "{params.checkv_q}" = "high" ]; then
+       grep -e "Complete" -e "High-quality" {input.qsum} | awk '{{ print $1 }}' >{params.tempclist}
+    elif [ "{params.checkv_q}" = "medium" ]; then
+       grep -e "Complete" -e "High-quality" -e "Medium-quality" {input.qsum} | awk '{{ print $1 }}' >{params.tempclist}
+    fi
+
+    if [ "{params.checkv_q}" != "all" ]; then
+        seqtk subseq {input.fna} {params.tempclist} > {params.outdir}/temp && mv {params.outdir}/temp {output}
+        rm -fv {params.tempclist}
+    else
+        cp {input.fna} {output}
+    fi
+
+    """
+
 
 
 rule bbmap:
     threads: clust_conf["bbmap"]["threads"]
     envmodules: clust_conf["bbmap"]["modules"]
-    input: fna = expand(rules.checkv.output.fna, sample=SAMPLES),
-           fake = ancient(rules.createlogdir.output)
+    input: expand(rules.checkv_filter.output, sample=SAMPLES)
     params: outdir = pjoin(OUT, "bbmap"),
             input_ctgs = pjoin(OUT, "bbmap", "all_input_contigs.fasta"),
 	    log = pjoin(OUT, "bbmap", "log.txt"),
@@ -170,9 +199,9 @@ rule bbmap:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-    cat {input.fna} >{params.input_ctgs}
+    cat {input} >{params.input_ctgs}
 
-    dedupe.sh in={params.input_ctgs} out={output.unique_seqs} csf={params.stats} minscaf=5000 \
+    dedupe.sh in={params.input_ctgs} out={output.unique_seqs} csf={params.stats} minscaf={config[vs_min_length]} \
 	mergenames=t ex=f usejni=t threads={threads}
 
 
@@ -188,13 +217,10 @@ rule mmseqs:
 	    DB_clu = pjoin(OUT, "mmseqs", "DB/DB_clu"),
 	    DB_clu_seq = pjoin(OUT, "mmseqs", "DB/DB_clu_seq"),
 	    DB_clu_fasta = pjoin(OUT, "mmseqs", "cluster_seqs.fasta"),
-	    DB_clu_rep = pjoin(OUT, "mmseqs", "DB_clu_rep")
+	    DB_clu_rep = pjoin(OUT, "mmseqs", "DB/DB_clu_rep")
     output: DB_clu_rep_fasta = pjoin(OUT, "mmseqs", "representative_seqs.fasta"),
             DB_clu_tsv = pjoin(OUT, "mmseqs", "DB_clu.tsv"),
             flat_DB_clu_tsv = pjoin(OUT, "mmseqs", "flat_DB_clu.tsv")
-
-
-
     shell:"""
     ## run mmseqs on all deduped genomes
 
@@ -333,11 +359,11 @@ rule diamond:
 ###### ALL RULE #############
 rule all:
     input: GENOMADALL = expand(rules.genomad.output.fna, sample=SAMPLES),
-           CHECKVALL = expand(rules.checkv.output, sample=SAMPLES),
+           CHECKVALL = expand(rules.checkv_filter.output, sample=SAMPLES),
            VERSEGALL = expand(rules.verse_genomad.output.readcounts_virus, sample=SAMPLES),
            BBMAPALL = rules.bbmap.output.unique_seqs,
 	   MMSEQSALL = rules.mmseqs.output.DB_clu_rep_fasta,
            DIAMALL = expand(rules.diamond.output, sample=SAMPLES) if DIAMOND_DB_NAME else [],
-           VOTUALL = rules.votu.output,
-           DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
-	   IPHOPALL = expand(rules.iphop.output, sample=SAMPLES)
+           VOTUALL = rules.votu.output
+           # DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
+	   # IPHOPALL = expand(rules.iphop.output, sample=SAMPLES)
