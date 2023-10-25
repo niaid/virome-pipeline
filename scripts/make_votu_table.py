@@ -11,19 +11,6 @@ parser.add_argument("-v", "--value", help="what value to fill in the table", cho
 parser.add_argument("-s", "--suffix", help="suffix of abundance files to remove when making table", default = '_virus.count.CDS.cpm.txt')
 args = parser.parse_args()
 
-def flatten(group):
-    """row: each row in data.frame
-       df: dataframe to append to
-
-    """
-    row = group.iloc[0]
-    seqs = row['repseq'].split(">")
-    seqs = seqs + row['seq'].split(">")
-    rep = seqs[0]
-    df = pd.DataFrame(columns = ['repseq', 'seq'])
-    for s in seqs:
-        df = df.append({ 'repseq': rep, 'seq': s }, ignore_index=True)
-    return(df)
 
 def read_abund(abundfile, mmseqs, value, sfx=""):
     """abundfile: abundance filename - output of verse
