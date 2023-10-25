@@ -41,7 +41,6 @@ rule createsampledir:
     """
 
 
-
 ########## PIPELINE RULES ########
 
 rule genomad:
@@ -52,7 +51,9 @@ rule genomad:
     params: outdir = pjoin(SOUT, "genomad"),
             renamed_assembly = pjoin(SOUT, "genomad", "{sample}" + ".fasta")
     output: fna = pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus.fna"),
-            gff = pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus_genes.gff"),
+            genes = pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus_genes.tsv"),
+            proteins =  pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus_proteins.faa"),
+            summary = pjoin(SOUT, "genomad", "{sample}_summary","{sample}_virus_summary.tsv"),
             assembly_headermap = pjoin(SOUT, "genomad", "{sample}" + "_assembly_headermap.txt")
     shell:"""
     ## genomad search for viral contigs
@@ -78,22 +79,25 @@ rule genomad:
     ## run genomad
     genomad end-to-end --cleanup --threads {threads} $renamed_assembly {params.outdir} {config[genomaddb]}
 
-    ## make gff from virus genes files
-    python3 {config[scriptdir]}/scripts/genomad_genes2gff.py {params.outdir}/{wildcards.sample}_summary/{wildcards.sample}_virus_genes.tsv >{output.gff}
-
     rm $renamed_assembly
 
     """
 
-rule verse:
+rule verse_genomad:
     threads: clust_conf["verse"]["threads"]
     envmodules: *clust_conf["verse"]["modules"]
-    input:  gff = rules.genomad.output.gff,
+    input:  genes = rules.genomad.output.genes,
+            fna = rules.genomad.output.fna,
+            virus = rules.genomad.output.summary,
+            headermap = rules.genomad.output.assembly_headermap,
             bam = ancient(pjoin(IN, "{sample}" + config["bam_suffix"]))
-    params: outdir = pjoin(SOUT, "verse"),
-            prefix = pjoin(SOUT, "verse", "{sample}_virus_genes.count"),
-            counts_only = pjoin(SOUT, "verse", "{sample}_virus_genes.count.CDS.txt")
-    output: pjoin(SOUT, "verse", "{sample}_virus_genes.count.CDS.cpm.txt")
+    params: outdir = pjoin(SOUT, "verse_genomad"),
+            prefix_genes = pjoin(SOUT, "verse_genomad", "{sample}_virus_genes.count"),
+            counts_only_genes = pjoin(SOUT, "verse_genomad", "{sample}_virus_genes.count.CDS.txt"),
+            prefix_virus = pjoin(SOUT, "verse_genomad", "{sample}_virus.count"),
+            counts_only_virus = pjoin(SOUT, "verse_genomad", "{sample}_virus.count.CDS.txt")
+    output: readcounts_genes = pjoin(SOUT, "verse_genomad", "{sample}_virus_genes.count.CDS.cpm.txt"),
+            readcounts_virus = pjoin(SOUT, "verse_genomad", "{sample}_virus.count.CDS.cpm.txt")
     shell:"""
     ## estimate gene abundances with verse
     verse -v
@@ -102,18 +106,28 @@ rule verse:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-    verse -a {input.gff} -o {params.prefix} -g ID -z 1 -t CDS -l -T {threads} {input.bam}
 
-    python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only} >{output}
+    ## make gff from virus genes files
+    python3 {config[scriptdir]}/scripts/genomad_genes2gff.py {input.genes} -m {input.headermap} >{params.prefix_genes}.gff
+    verse -a {params.prefix_genes}.gff -o {params.prefix_genes} -g ID -z 1 -t CDS -l -T {threads} {input.bam}
+
+    python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_genes} >{output.readcounts_genes}
+
+    ## make gff from virus summary
+    python3 {config[scriptdir]}/scripts/genomad_virus2gff.py {input.virus} -m {input.headermap} >{params.prefix_virus}.gff
+    verse -a {params.prefix_virus}.gff -o {params.prefix_virus} -g ID -z 5 -t CDS -l -T {threads} {input.bam}
+    python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_virus} >{output.readcounts_virus}
 
     """
+
 
 rule checkv:
     threads: clust_conf["checkv"]["threads"]
     envmodules: *clust_conf["checkv"]["modules"]
     input: rules.genomad.output.fna
     params: outdir = pjoin(SOUT, "checkv")
-    output: pjoin(SOUT, "checkv", "combined.fna")
+    output: fna = pjoin(SOUT, "checkv", "combined.fna"),
+            qsum = pjoin(SOUT, "checkv", "quality_summary.tsv")
     shell:"""
     ## run checkv to qc genomad results and trim host regions left at the end of proviruses
 
@@ -123,25 +137,61 @@ rule checkv:
 
     checkv end_to_end {input} {params.outdir} -d {config[checkvdb]} -t {threads}
 
-    cat {params.outdir}/proviruses.fna {params.outdir}/viruses.fna \
-        >{params.outdir}/combined.fna
-
+    cat {params.outdir}/proviruses.fna {params.outdir}/viruses.fna >{output.fna}
 
     """
+
+def checkv_q_validate(checkv_q):
+    """return grep string for filtering checkv contigs"""
+    if checkv_q not in ['all', 'medium', 'high', 'complete']:
+        raise ValueError(f"checkv_q value in config is '{checkv_q}'.  Should be one of 'all', 'medium', 'high', 'complete'. Exiting.")
+    return(checkv_q)
+
+
+rule checkv_filter:
+    threads: clust_conf["checkv_filter"]["threads"]
+    envmodules: clust_conf["checkv_filter"]["modules"]
+    input: fna = rules.genomad.output.fna,
+           qsum = rules.checkv.output.qsum
+    params: outdir = pjoin(SOUT, "checkv"),
+            checkv_q = checkv_q_validate(config["checkv_q"]),
+            tempclist = pjoin(SOUT, "checkv", "tempclist.txt")
+    output: pjoin(SOUT, "checkv", "checkv_filtered_genomad_viruses.fna")
+    shell:"""
+    ## use checkv quality assessment to filter viral contigs for clustering
+
+    ## cleanup possible previous run
+    rm -rf {output}
+
+
+    if [ "{params.checkv_q}" = "complete" ]; then
+       grep -e "Complete" {input.qsum} | awk '{{ print $1 }}' >{params.tempclist}
+    elif [ "{params.checkv_q}" = "high" ]; then
+       grep -e "Complete" -e "High-quality" {input.qsum} | awk '{{ print $1 }}' >{params.tempclist}
+    elif [ "{params.checkv_q}" = "medium" ]; then
+       grep -e "Complete" -e "High-quality" -e "Medium-quality" {input.qsum} | awk '{{ print $1 }}' >{params.tempclist}
+    fi
+
+    if [ "{params.checkv_q}" != "all" ]; then
+        seqtk subseq {input.fna} {params.tempclist} > {params.outdir}/temp && mv {params.outdir}/temp {output}
+        rm -fv {params.tempclist}
+    else
+        cp {input.fna} {output}
+    fi
+
+    """
+
+
 
 rule bbmap:
     threads: clust_conf["bbmap"]["threads"]
     envmodules: clust_conf["bbmap"]["modules"]
-    input: expand(rules.checkv.output, sample=SAMPLES)
+    input: expand(rules.checkv_filter.output, sample=SAMPLES)
     params: outdir = pjoin(OUT, "bbmap"),
             input_ctgs = pjoin(OUT, "bbmap", "all_input_contigs.fasta"),
 	    log = pjoin(OUT, "bbmap", "log.txt"),
 	    stats = pjoin(OUT, "bbmap", "cluster_stats.txt")
     output: unique_seqs = pjoin(OUT, "bbmap", "unique_seqs.fasta")
-
-            
-
-
     shell:"""
     ## run bbmap on all contigs to remove duplicates
 
@@ -151,41 +201,43 @@ rule bbmap:
 
     cat {input} >{params.input_ctgs}
 
-    dedupe.sh in={params.input_ctgs} out={output.unique_seqs} csf={params.stats} minscaf=5000 \
-	mergenames=t ex=f mergedelimiter=|
+    dedupe.sh in={params.input_ctgs} out={output.unique_seqs} csf={params.stats} minscaf={config[vs_min_length]} \
+	mergenames=t ex=f usejni=t threads={threads}
 
 
     """
 
 rule mmseqs:
     threads: clust_conf["mmseqs"]["threads"]
-    envmodules: clust_conf["mmseqs"]["modules"]
+    envmodules: *clust_conf["mmseqs"]["modules"]
     input: rules.bbmap.output.unique_seqs
     params: outdir = pjoin(OUT, "mmseqs"),
-            DB = pjoin(OUT, "mmseqs", "DB"),
-	    DB_clu = pjoin(OUT, "mmseqs", "DB_clu"),
-	    DB_clu_tsv = pjoin(OUT, "mmseqs", "DB_clu.tsv"),
-	    DB_clu_seq = pjoin(OUT, "mmseqs", "DB_clu_seq"),
+            DB_dir = pjoin(OUT, "mmseqs", "DB"),
+            DB = pjoin(OUT, "mmseqs", "DB/DB"),
+	    DB_clu = pjoin(OUT, "mmseqs", "DB/DB_clu"),
+	    DB_clu_seq = pjoin(OUT, "mmseqs", "DB/DB_clu_seq"),
 	    DB_clu_fasta = pjoin(OUT, "mmseqs", "cluster_seqs.fasta"),
-	    DB_clu_rep = pjoin(OUT, "mmseqs", "DB_clu_rep")
-    output: DB_clu_rep_fasta = pjoin(OUT, "mmseqs", "representative_seqs.fasta")
-	    
-
+	    DB_clu_rep = pjoin(OUT, "mmseqs", "DB/DB_clu_rep")
+    output: DB_clu_rep_fasta = pjoin(OUT, "mmseqs", "representative_seqs.fasta"),
+            DB_clu_tsv = pjoin(OUT, "mmseqs", "DB_clu.tsv"),
+            flat_DB_clu_tsv = pjoin(OUT, "mmseqs", "flat_DB_clu.tsv")
     shell:"""
-    ## run mmseqs on all deduped genomes 
+    ## run mmseqs on all deduped genomes
 
     ## cleanup possible previous failed run
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
+    mkdir {params.DB_dir}
+
     mmseqs createdb {input} {params.DB}
 
-    mmseqs cluster {params.DB} {params.DB_clu} tmp --cov-mode 1 -c 0.85 \
-	--min-seq-id 0.95 --cluster-mode 2
+    mmseqs cluster {params.DB} {params.DB_clu} $TMPDIR --cov-mode 1 -c 0.85 \
+	--min-seq-id 0.95 --cluster-mode 2 --threads {threads}
 
-    mmseqs createtsv {params.DB} {params.DB} {params.DB_clu} {params.DB_clu_tsv}
+    mmseqs createtsv {params.DB} {params.DB} {params.DB_clu} {output.DB_clu_tsv} --threads {threads}
 
-    mmseqs createseqfiledb {params.DB} {params.DB_clu} {params.DB_clu_seq}
+    mmseqs createseqfiledb {params.DB} {params.DB_clu} {params.DB_clu_seq} --threads {threads}
 
     mmseqs result2flat {params.DB} {params.DB} {params.DB_clu_seq} {params.DB_clu_fasta}
 
@@ -193,8 +245,32 @@ rule mmseqs:
 
     mmseqs convert2fasta {params.DB_clu_rep} {output.DB_clu_rep_fasta}
 
+    ## flatten clu.tsv file so each row is one repseq and one seq
+    python3 {config[scriptdir]}/scripts/flatten_mmseqs_tsv.py {output.DB_clu_tsv} > {output.flat_DB_clu_tsv}
+
 
     """
+
+rule votu:
+    threads: clust_conf["votu"]["threads"]
+    envmodules: clust_conf["votu"]["modules"]
+    input: mmseqs = rules.mmseqs.output.flat_DB_clu_tsv,
+           abund = expand(rules.verse_genomad.output.readcounts_virus, sample=SAMPLES)
+    params: outdir = pjoin(OUT, "votu"),
+            filelist = pjoin(OUT, "votu", "abundfiles.txt")
+    output: pjoin(OUT, "votu", "vOTU_table.tsv")
+    shell:"""
+    ## cleanup possible previous failed run
+    rm -rf {params.outdir}
+    mkdir -p {params.outdir}
+
+    echo "{input.abund}" >{params.filelist}
+    tr " " "\\n" <{params.filelist} >{params.outdir}/temp && mv {params.outdir}/temp {params.filelist}
+    python3 {config[scriptdir]}/scripts/make_votu_table.py {input.mmseqs} {params.filelist} >{output}
+
+
+    """
+
 
 rule dramv:
     threads: clust_conf["dramv"]["threads"]
@@ -220,7 +296,7 @@ rule dramv:
 rule iphop:
     threads: clust_conf["iphop"]["threads"]
     envmodules: *clust_conf["iphop"]["modules"]
-    input: fasta = rules.genomad.output.fna
+    input: fasta = rules.mmseqs.output.DB_clu_rep_fasta
     params: outdir = pjoin(SOUT, "iphop")
     output: genes = pjoin(SOUT, "iphop/Host_prediction_to_genome_m90.csv")
 
@@ -240,13 +316,16 @@ rule iphop:
 
     """
 
+if "diamonddb" in config:
+    DIAMOND_DB_NAME=os.path.splitext(os.path.basename(config["diamonddb"]))[0]
+else:
+    DIAMOND_DB_NAME=None
 
-DIAMOND_DB_NAME=os.path.splitext(os.path.basename(config["diamonddb"]))[0]
 rule diamond:
     threads: clust_conf["diamond"]["threads"]
     envmodules: clust_conf["diamond"]["modules"]
-    input: rules.dramv.output.genes
-    output: pjoin(SOUT, "diamond/{sample}." + DIAMOND_DB_NAME + '.tsv')
+    input: rules.genomad.output.proteins
+    output: pjoin(SOUT, "diamond/{sample}." + DIAMOND_DB_NAME + '.tsv') if DIAMOND_DB_NAME else "temp.txt"
     params: outdir = pjoin(SOUT, "diamond"),
             s = "{sample}",
             tempdir = pjoin(clust_conf["diamond"]["tmpdir"], "{sample}_virome_diamond"),
@@ -279,11 +358,12 @@ rule diamond:
 
 ###### ALL RULE #############
 rule all:
-    input: GENOMADALL = expand(rules.genomad.output.gff, sample=SAMPLES),
-           CHECKVALL = expand(rules.checkv.output, sample=SAMPLES),
-           DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
-	   IPHOPALL = expand(rules.iphop.output, sample=SAMPLES),
-           DIAMALL = expand(rules.diamond.output, sample=SAMPLES),
-           VERSEALL = expand(rules.verse.output, sample=SAMPLES),
+    input: GENOMADALL = expand(rules.genomad.output.fna, sample=SAMPLES),
+           CHECKVALL = expand(rules.checkv_filter.output, sample=SAMPLES),
+           VERSEGALL = expand(rules.verse_genomad.output.readcounts_virus, sample=SAMPLES),
            BBMAPALL = rules.bbmap.output.unique_seqs,
-	   MMSEQSALL = rules.mmseqs.output.DB_clu_rep_fasta
+	   MMSEQSALL = rules.mmseqs.output.DB_clu_rep_fasta,
+           DIAMALL = expand(rules.diamond.output, sample=SAMPLES) if DIAMOND_DB_NAME else [],
+           VOTUALL = rules.votu.output
+           # DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
+	   # IPHOPALL = expand(rules.iphop.output, sample=SAMPLES)
