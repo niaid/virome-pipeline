@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
 
+"""
+Requires python >= 3.9 and pandas
+
+"""
+
 import argparse
 import pandas as pd
 import sys
 
 parser = argparse.ArgumentParser()
-parser.add_argument("mmseqstsv", help="mmseqs tsv file")
-parser.add_argument("filelist", help="list of abundance files for each sample - output of verse. sample name should be prefix")
-parser.add_argument("-v", "--value", help="what value to fill in the table", choices = ['count', 'cpm', 'rpk'], default = 'count')
-parser.add_argument("-s", "--suffix", help="suffix of abundance files to remove when making table", default = '_virus.count.CDS.cpm.txt')
+parser.add_argument("mmseqstsv", help="mmseqs flattened tsv file (output of flatten_mmseqs_tsv.py)")
+parser.add_argument("filelist", help="file containing list of sample abundance/count files (one per line) to include in vOTU table. count files are output of verse. sample names should be prefixes")
+parser.add_argument("-v", "--value", help="what value from abundance file to fill in the table (default: %(default)s)", choices = ['count', 'cpm', 'rpk'], default = 'count')
+parser.add_argument("-s", "--suffix", help="suffix of abundance files to remove when making table (default: %(default)s)", default = '_virus.count.CDS.cpm.txt')
 args = parser.parse_args()
 
 
 def read_abund(abundfile, mmseqs, value, sfx=""):
     """abundfile: abundance filename - output of verse
        mmseqs: dataframe mapping repseq to seq
-       value: which value column to include
+       value: which value column from abundfile to include
        sfx: suffix to remove from abundfile for sample name
     """
     a = pd.read_csv(abundfile, sep='\t')
