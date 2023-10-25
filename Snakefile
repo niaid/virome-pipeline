@@ -194,6 +194,7 @@ rule bbmap:
     output: unique_seqs = pjoin(OUT, "bbmap", "unique_seqs.fasta")
     shell:"""
     ## run bbmap on all contigs to remove duplicates
+    dedupe.sh --version
 
     ## cleanup possible previous failed run
     rm -rf {params.outdir}
@@ -223,6 +224,7 @@ rule mmseqs:
             flat_DB_clu_tsv = pjoin(OUT, "mmseqs", "flat_DB_clu.tsv")
     shell:"""
     ## run mmseqs on all deduped genomes
+    mmseqs version
 
     ## cleanup possible previous failed run
     rm -rf {params.outdir}
