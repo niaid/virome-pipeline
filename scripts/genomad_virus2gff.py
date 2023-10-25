@@ -11,9 +11,8 @@ import csv
 import re
 
 parser = argparse.ArgumentParser()
-parser.add_argument("genesfile", help="genomad *_virus_genes.tsv file")
+parser.add_argument("virussummary", help="genomad *_virus_summary.tsv file")
 parser.add_argument("-m", "--headermap", help="genomad *_assembly_headermap.txt file.  optional used in case original contig names were changed.")
-parser.add_argument("-p", "--plasmidgenesfile", help="genomad *_plasmid_genes.tsv file", required=False)
 args = parser.parse_args()
 
 
@@ -39,11 +38,11 @@ def read_headermap(headermap):
     return(hmap)
 
 
-def make_gff(inputfile, plasmid=False, headermap=None):
+def make_gff(inputfile, headermap=None):
     """
     Args:
-      inputfile: genomad *_genes.tsv file
-      plasmid: logical. is this a plasmid genes file? if so, Note=plasmid will be added to the gff attributes.
+      inputfile: genomad *_virus_summary.tsv file
+      headermap: filename. file mapping from old contig names to new ones. optional
 
     Return:
       doesn't return anything.  prints to STDOUT
@@ -53,27 +52,24 @@ def make_gff(inputfile, plasmid=False, headermap=None):
     with open(inputfile, 'r') as gf:
         gfreader = csv.DictReader(gf, delimiter="\t")
         for row in gfreader:
-            contig = row['gene'].rstrip('0123456789')
-            contig = contig.removesuffix('_')
-            contig = re.sub("\\|provirus.+$", "", contig)
+            contig = re.sub("\\|provirus.+$", "", row['seq_name'])
             if (headermap):
                 contig = hmap[contig]
             # source = 'genomad'
             # type = 'CDS'
-            # start = row['start']
-            # end = row['end']
-            ## start and end coordinates for provirus appear to be coordinates from the original contig
-            score = '.' if row['bitscore'] == "NA" else row['bitscore']
-            strand = strand_sign(row['strand'])
+            if row['coordinates'] == "NA":
+                start = "1"
+                end = row['length']
+            else:
+                [start, end] = row['coordinates'].split("-")
+            score = row['virus_score']
+            # strand = '+'
             # phase = '.'
-            attributes = "ID=" + row['gene'] + ';Name=' + row['gene']
-            if plasmid: attributes = attributes + ';Note=plasmid'
-            print(contig,'genomad','CDS',row['start'],row['end'],score,strand,'.',attributes, sep='\t', flush=True)
+            attributes = "ID=" + row['seq_name'] + ';Name=' + row['seq_name']
+            print(contig,'genomad','CDS',start,end,score,'+','.',attributes, sep='\t', flush=True)
 
 
 ## print header
 print('##gff-version 3')
 
-make_gff(args.genesfile, headermap=args.headermap)
-if (args.plasmidgenesfile is not None):
-    make_gff(args.plasmidgenesfile, plasmid=True, headermap=args.headermap)
+make_gff(args.virussummary, headermap=args.headermap)
