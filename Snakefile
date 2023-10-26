@@ -221,7 +221,8 @@ rule mmseqs:
 	    DB_clu_rep = pjoin(OUT, "mmseqs", "DB/DB_clu_rep")
     output: DB_clu_rep_fasta = pjoin(OUT, "mmseqs", "representative_seqs.fasta"),
             DB_clu_tsv = pjoin(OUT, "mmseqs", "DB_clu.tsv"),
-            flat_DB_clu_tsv = pjoin(OUT, "mmseqs", "flat_DB_clu.tsv")
+            flat_DB_clu_tsv = pjoin(OUT, "mmseqs", "flat_DB_clu.tsv"),
+            renamed_DB_clu_rep_fasta = pjoin(OUT, "mmseqs", "representative_seqs.renamed.fasta")
     shell:"""
     ## run mmseqs on all deduped genomes
     mmseqs version
@@ -247,8 +248,11 @@ rule mmseqs:
 
     mmseqs convert2fasta {params.DB_clu_rep} {output.DB_clu_rep_fasta}
 
-    ## flatten clu.tsv file so each row is one repseq and one seq
+    ## rename repseq to only use first dup sequence from bbmap
+    # flatten clu.tsv file so each row is one repseq and one seq
     python3 {config[scriptdir]}/scripts/flatten_mmseqs_tsv.py {output.DB_clu_tsv} > {output.flat_DB_clu_tsv}
+    # rename representative_seqs.fasta
+    sed '/^>/ s!>[^>]*!!2g' {output.DB_clu_rep_fasta} >{output.renamed_DB_clu_rep_fasta}
 
 
     """
@@ -257,19 +261,29 @@ rule votu:
     threads: clust_conf["votu"]["threads"]
     envmodules: clust_conf["votu"]["modules"]
     input: mmseqs = rules.mmseqs.output.flat_DB_clu_tsv,
-           abund = expand(rules.verse_genomad.output.readcounts_virus, sample=SAMPLES)
+           abund = expand(rules.verse_genomad.output.readcounts_virus, sample=SAMPLES),
+           summ = expand(rules.genomad.output.summary, sample=SAMPLES)
     params: outdir = pjoin(OUT, "votu"),
-            filelist = pjoin(OUT, "votu", "abundfiles.txt")
-    output: pjoin(OUT, "votu", "vOTU_table.tsv")
+            filelist = pjoin(OUT, "votu", "abundfiles.txt"),
+            summlist = pjoin(OUT, "votu", "summaryfiles.txt")
+    output: votu = pjoin(OUT, "votu", "vOTU_table.tsv"),
+            gmdanno = pjoin(OUT, "votu", "repseq_genomad_virus_summary.tsv")
     shell:"""
+    ## make vOTU table
+    python3 --version
+
     ## cleanup possible previous failed run
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
+    ## vOTU table
     echo "{input.abund}" >{params.filelist}
     tr " " "\\n" <{params.filelist} >{params.outdir}/temp && mv {params.outdir}/temp {params.filelist}
-    python3 {config[scriptdir]}/scripts/make_votu_table.py {input.mmseqs} {params.filelist} >{output}
+    python3 {config[scriptdir]}/scripts/make_votu_table.py {input.mmseqs} {params.filelist} >{output.votu}
 
+    ## collate genomad annotations
+    echo "{input.summ}" | tr " " "\\n" >{params.summlist}
+    python3 {config[scriptdir]}/scripts/repseq_genomad_annotations.py {output.votu} {params.summlist} >{output.gmdanno}
 
     """
 
@@ -298,9 +312,9 @@ rule dramv:
 rule iphop:
     threads: clust_conf["iphop"]["threads"]
     envmodules: *clust_conf["iphop"]["modules"]
-    input: fasta = rules.mmseqs.output.DB_clu_rep_fasta
-    params: outdir = pjoin(SOUT, "iphop")
-    output: genes = pjoin(SOUT, "iphop/Host_prediction_to_genome_m90.csv")
+    input: fasta = rules.mmseqs.output.renamed_DB_clu_rep_fasta
+    params: outdir = pjoin(OUT, "iphop")
+    output: genes = pjoin(OUT, "iphop", "Host_prediction_to_genome_m90.csv")
 
     shell:"""
     ## iphop for bacteriophage host calls
@@ -310,7 +324,6 @@ rule iphop:
     ## cleanup possible previous failed run
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
-
 
     iphop predict --fa_file {input.fasta} --db_dir {config[iphopdb]} \
 	--out_dir {params.outdir} -t {threads}
@@ -327,13 +340,13 @@ rule diamond:
     threads: clust_conf["diamond"]["threads"]
     envmodules: clust_conf["diamond"]["modules"]
     input: rules.genomad.output.proteins
-    output: pjoin(SOUT, "diamond/{sample}." + DIAMOND_DB_NAME + '.tsv') if DIAMOND_DB_NAME else "temp.txt"
+    output: pjoin(SOUT, "diamond", "{sample}." + DIAMOND_DB_NAME + '.tsv') if DIAMOND_DB_NAME else "temp.txt"
     params: outdir = pjoin(SOUT, "diamond"),
             s = "{sample}",
             tempdir = pjoin(clust_conf["diamond"]["tmpdir"], "{sample}_virome_diamond"),
             dbname = DIAMOND_DB_NAME
     shell:"""
-    ## align gene sequences found by DRAM-v/prodigal to a diamond database for
+    ## align gene sequences found by genomad to a diamond database for
     ## additional functional annotation
     diamond --version
 
@@ -365,7 +378,7 @@ rule all:
            VERSEGALL = expand(rules.verse_genomad.output.readcounts_virus, sample=SAMPLES),
            BBMAPALL = rules.bbmap.output.unique_seqs,
 	   MMSEQSALL = rules.mmseqs.output.DB_clu_rep_fasta,
+           VOTUALL = rules.votu.output.votu,
+           IPHOPALL = rules.iphop.output,
            DIAMALL = expand(rules.diamond.output, sample=SAMPLES) if DIAMOND_DB_NAME else [],
-           VOTUALL = rules.votu.output,
            DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
-	   IPHOPALL = expand(rules.iphop.output, sample=SAMPLES)
