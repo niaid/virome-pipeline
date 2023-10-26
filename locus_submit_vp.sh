@@ -30,8 +30,9 @@ clustercmd="qsub -l h_vmem={cluster.h_vmem} -j y -pe threaded {cluster.threads} 
 
 ## add --dryrun to test
 ## sometimes useful to add --ignore-incomplete if snakemake's incomplete checking is not working for you.
+## and --rerun-triggers mtime if you are debugging and don't want to keep re-running rules when code/format is changed but output is unchanged
 snakemake -s ${scriptdir}/Snakefile --jobs 32 --jobname "{name}.{cluster.jobname}.{jobid}" \
 	  --configfile ${configfile} \
-	  --cluster "${clustercmd}" --cluster-config ${clusterfile} \
+	  --cluster "${clustercmd}" --cluster-config ${clusterfile} --cluster-cancel "qdel" \
 	  --nolock --keep-going --keep-incomplete --use-envmodules \
 	  all
