@@ -49,7 +49,7 @@ mmseqs:
 votu:
   threads: 2
   h_vmem: 4G
-   extra: '-l quick'
+  extra: '-l quick'
   modules: Python/3.9.5-GCCcore-10.3.0
   log: 'logs'
   jobname: 'all'
