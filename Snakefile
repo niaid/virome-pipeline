@@ -82,7 +82,7 @@ rule genomad:
 
 
     ## run genomad
-    genomad end-to-end {params.genomad_filter} --cleanup --threads {threads} $renamed_assembly {params.outdir} {config[genomaddb]}
+    genomad end-to-end {params.genomad_filter} --enable-score-calibration --cleanup --threads {threads} $renamed_assembly {params.outdir} {config[genomaddb]}
 
     rm $renamed_assembly
 
