@@ -113,9 +113,9 @@ rule verse_genomad:
 
     python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_genes} >{output.readcounts_genes}
 
-    ## make gff from virus summary
+    ## make gff from virus summary; use default -z 1 instead of -z 5
     python3 {config[scriptdir]}/scripts/genomad_virus2gff.py {input.virus} -m {input.headermap} >{params.prefix_virus}.gff
-    verse -a {params.prefix_virus}.gff -o {params.prefix_virus} -g ID -z 5 -t CDS -l -T {threads} {input.bam}
+    verse -a {params.prefix_virus}.gff -o {params.prefix_virus} -g ID -z 1 -t CDS -l -T {threads} {input.bam}
     python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_virus} >{output.readcounts_virus}
 
     """
