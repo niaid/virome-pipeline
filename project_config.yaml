@@ -14,6 +14,9 @@ outdir: virome_output
 
 #genomad database current location
 genomaddb: /hpcdata/bio_data/genomad/genomad_db/
+# genomad filtering. options are: default, relaxed, conservative
+# see https://portal.nersc.gov/genomad/post_classification_filtering.html
+genomad_filter: default
 
 # checkv database
 checkvdb: /hpcdata/bio_data/checkv/checkv-db-v1.5

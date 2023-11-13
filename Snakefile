@@ -43,13 +43,18 @@ rule createsampledir:
 
 ########## PIPELINE RULES ########
 
+genomad_filter = { "default": "",
+                   "relaxed": "--relaxed",
+                   "conservative": "--conservative"
+                   }
 rule genomad:
     threads: clust_conf["genomad"]["threads"]
     envmodules: clust_conf["genomad"]["modules"]
     input: fake = ancient(rules.createsampledir.output),
            assembly = pjoin(IN, "{sample}" + config["assembly_suffix"])
     params: outdir = pjoin(SOUT, "genomad"),
-            renamed_assembly = pjoin(SOUT, "genomad", "{sample}" + ".fasta")
+            renamed_assembly = pjoin(SOUT, "genomad", "{sample}" + ".fasta"),
+            genomad_filter = genomad_filter[config["genomad_filter"]]
     output: fna = pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus.fna"),
             genes = pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus_genes.tsv"),
             proteins =  pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus_proteins.faa"),
@@ -77,7 +82,7 @@ rule genomad:
 
 
     ## run genomad
-    genomad end-to-end --cleanup --threads {threads} $renamed_assembly {params.outdir} {config[genomaddb]}
+    genomad end-to-end {params.genomad_filter} --cleanup --threads {threads} $renamed_assembly {params.outdir} {config[genomaddb]}
 
     rm $renamed_assembly
 
