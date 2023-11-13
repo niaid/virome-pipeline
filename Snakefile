@@ -255,7 +255,7 @@ rule mmseqs:
 
     ## rename repseq to only use first dup sequence from bbmap
     # flatten clu.tsv file so each row is one repseq and one seq
-    python3 {config[scriptdir]}/scripts/flatten_mmseqs_tsv.py {output.DB_clu_tsv} > {output.flat_DB_clu_tsv}
+    python3 {config[scriptdir]}/scripts/flatten_mmseqs_tsv.py {output.DB_clu_tsv} | sort -u > {output.flat_DB_clu_tsv}
     # rename representative_seqs.fasta
     sed '/^>/ s!>[^>]*!!2g' {output.DB_clu_rep_fasta} >{output.renamed_DB_clu_rep_fasta}
 
