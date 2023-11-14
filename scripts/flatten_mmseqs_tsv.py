@@ -19,7 +19,6 @@ with open(infile, 'r') as f:
         l = line.split()
         seqs = l[0].split(">")
         seqs = list(set(seqs + l[1].split(">")))
-        print(seqs)
         rep = seqs[0]
         for s in seqs:
             print(rep, s, sep='\t')
