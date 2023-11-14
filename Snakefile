@@ -292,12 +292,33 @@ rule votu:
 
     """
 
+rule vs4dramv:
+    threads: clust_conf["vs4dramv"]["threads"]
+    envmodules: clust_conf["vs4dramv"]["modules"]
+    input: rules.checkv.output.fna
+    params: outdir = pjoin(SOUT, "vs2")
+    output: fasta = pjoin(SOUT, "vs2/for-dramv/final-viral-combined-for-dramv.fa"),
+            tab = pjoin(SOUT, "vs2/for-dramv/viral-affi-contigs-for-dramv.tab")
+    shell:"""
+    ## run virsorter to produce input for DRAM-v
+    virsorter --version
+
+    ## cleanup possible previous failed run
+    rm -rf {params.outdir}
+    mkdir -p {params.outdir}
+
+    virsorter run --seqname-suffix-off --viral-gene-enrich-off --provirus-off \
+        --prep-for-dramv -i {input} \
+        -w {params.outdir} --include-groups dsDNAphage,ssDNA,NCLDV --min-length {config[vs_min_length]} \
+        --min-score 0.5 -j {threads} all
+    """
 
 rule dramv:
     threads: clust_conf["dramv"]["threads"]
     envmodules: *clust_conf["dramv"]["modules"]
-    input: fasta = rules.genomad.output.fna
-    params: outdir = pjoin(SOUT, "dramv")
+    input: fasta = rules.vs4dramv.output.fasta if (config["dramv_amg"]) else rules.checkv.output.fna
+    params: outdir = pjoin(SOUT, "dramv"),
+            tab = pjoin(SOUT, "vs2/for-dramv/viral-affi-contigs-for-dramv.tab")
     output: genes = pjoin(SOUT, "dramv/dramv-annotate/genes.faa")
 
     shell:"""
@@ -309,9 +330,18 @@ rule dramv:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-    DRAM-v.py annotate -i {input.fasta} \
+    if [ "{config[dramv_amg]}" = "True" ]; then
+        DRAM-v.py annotate -i {input.fasta} \
+        -v {params.tab} \
         -o {params.outdir}/dramv-annotate --skip_trnascan \
         --threads {threads} --min_contig_size {config[vs_min_length]}
+
+        DRAM-v.py distill -i {params.outdir}/dramv-annotate/annotations.tsv -o {params.outdir}/dramv-distill
+    else
+        DRAM-v.py annotate -i {input.fasta} \
+        -o {params.outdir}/dramv-annotate --skip_trnascan \
+        --threads {threads} --min_contig_size {config[vs_min_length]}
+    fi
     """
 
 rule iphop:
@@ -386,4 +416,4 @@ rule all:
            VOTUALL = rules.votu.output.votu,
            IPHOPALL = rules.iphop.output,
            DIAMALL = expand(rules.diamond.output, sample=SAMPLES) if DIAMOND_DB_NAME else [],
-           DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
+           DRAMVALL = expand(rules.dramv.output, sample=SAMPLES)
