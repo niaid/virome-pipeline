@@ -15,7 +15,7 @@ The pipeline first searchs for viral genomes using Genomad<sup>2</sup>, which al
 - [_project_config.yaml_](project_config.yaml): for snakemake `--configfile` option.  config file with details for a specific project - working/input/output directories, path to scripts and other configs, sample names, options for specific rules in the pipeline, etc.
 - [_locus.cluster_config.yaml_](locus.cluster_config.yaml): cluster configuration file for snakemake `--cluster-config` option. specifically for NIAID Locus HPC which uses UGE. (sets parameters for `qsub` command for each rule's job, and which environment modules to use)
 - [_locus_submit_vp.sh_](locus_submit_vp.sh): batch job submit script for running the pipeline on Locus
-- *[scripts](scripts)*: see scripts README
+- *[scripts](scripts)*: see [scripts README](scripts/README.md)
 
 ## Running the Pipeline
 
@@ -25,16 +25,24 @@ The inputs to the pipeline are assembled contigs/scaffolds - one fasta file per 
 
 ### To run on Locus
 
-1. Clone this repo locally (may need to give username and password):
+1. Clone this repo locally:
 ```
-git clone https://github.niaid.nih.gov/bcbb/virome-pipeline
+git clone https://github.com/pooranibcbb/virome-pipeline
 ```
 
 2. Copy over the project config file _project_config.yaml_ and submit script _locus_submit_vp.sh_ to your project working directory, and edit both with the details for your specific project.  
    - for the submit script, the main items to edit are:
-     1. path to the project config file
+     1. path to the project config file, email address
      2. the arguments for the `snakemake` command at the bottom of the script (see comments in the script)
 
+   - for the project config, the main items to edit are:
+   
+     - paths to input, output, and working directory and email
+   
+     - pipeline options detailed in the comments of the config file
+   
+       
+   
 3. Submit the job script:
   ```
   qsub ./locus_submit_vp.sh
