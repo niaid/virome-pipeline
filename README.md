@@ -23,7 +23,7 @@ The pipeline first searchs for viral genomes using Genomad<sup>2</sup>, which al
 
 ### Inputs
 
-The inputs to the pipeline are assembled contigs/scaffolds - one fasta file per sample.  They should be located in (or symlinked to) a single directory, and the filenames should start with a unique per-sample name.
+The inputs to the pipeline are assembled contigs/scaffolds - one fasta file per sample; and bam files of reads aligned to the assemblies - one bam per sample.  They should be located in (or symlinked to) a single directory, and the filenames should start with a unique per-sample name.
 
 ### To run on Locus
 
