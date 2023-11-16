@@ -2,6 +2,8 @@
 
 written by Lauren Krausfeldt & Poorani Subramanian - bioinformatics@niaid.nih.gov
 
+[Pipeline Training Slides](https://github.com/pooranibcbb/virome-pipeline/releases/download/v0.1/bcbb_viral_metagenomics_2023.pdf)
+
 ## Description
 
 This is a pipeline for exploring viruses (ssDNA, dsDNA phage, and giant DNA viruses) and viral diversity in metagenomes. The pipeline accepts assembly (.fasta) and binary alignment map (.bam) files as input. These files are produced from the WGSA2 pipeline in Nephele<sup>1</sup>. The output of this pipeline provides viral genomes found in the metagenome assembly, their taxonomy and level of completeness, viral functional genes and their abundances, and vOTU abundances and their host taxonomy. 
