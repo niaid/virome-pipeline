@@ -30,7 +30,7 @@ checkv_filter:
   modules: seqtk/1.3-r106
 
 
-bbmap:
+bbtools_dedupe:
   threads: 8
   h_vmem: 8G
   modules: bbmap/38.90
