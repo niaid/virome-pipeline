@@ -5,8 +5,8 @@ clusterfile: /path/to/virome-pipeline/locus.cluster_config.yaml
 
 ## directories
 workdir: /path/to/workingdir
-# these directories are relative to the working directory - use full path if the dir is somewhere else
-# they need to exist
+# these directories are relative to the working directory
+# input directory should have assembly FASTA and bam files.  use full path if the input dir is outside of working directory
 indir: input
 outdir: virome_output
 
