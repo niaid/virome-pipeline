@@ -188,17 +188,17 @@ rule checkv_filter:
 
 
 
-rule bbmap:
-    threads: clust_conf["bbmap"]["threads"]
-    envmodules: clust_conf["bbmap"]["modules"]
+rule bbtools_dedupe:
+    threads: clust_conf["bbtools_dedupe"]["threads"]
+    envmodules: clust_conf["bbtools_dedupe"]["modules"]
     input: expand(rules.checkv_filter.output, sample=SAMPLES)
-    params: outdir = pjoin(OUT, "bbmap"),
-            input_ctgs = pjoin(OUT, "bbmap", "all_input_contigs.fasta"),
-	    log = pjoin(OUT, "bbmap", "log.txt"),
-	    stats = pjoin(OUT, "bbmap", "cluster_stats.txt")
-    output: unique_seqs = pjoin(OUT, "bbmap", "unique_seqs.fasta")
+    params: outdir = pjoin(OUT, "bbtools_dedupe"),
+            input_ctgs = pjoin(OUT, "bbtools_dedupe", "all_input_contigs.fasta"),
+	    log = pjoin(OUT, "bbtools_dedupe", "log.txt"),
+	    stats = pjoin(OUT, "bbtools_dedupe", "cluster_stats.txt")
+    output: unique_seqs = pjoin(OUT, "bbtools_dedupe", "unique_seqs.fasta")
     shell:"""
-    ## run bbmap on all contigs to remove duplicates
+    ## run bbtools_dedupe on all contigs to remove duplicates
     dedupe.sh --version
 
     ## cleanup possible previous failed run
@@ -216,7 +216,7 @@ rule bbmap:
 rule mmseqs:
     threads: clust_conf["mmseqs"]["threads"]
     envmodules: *clust_conf["mmseqs"]["modules"]
-    input: rules.bbmap.output.unique_seqs
+    input: rules.bbtools_dedupe.output.unique_seqs
     params: outdir = pjoin(OUT, "mmseqs"),
             DB_dir = pjoin(OUT, "mmseqs", "DB"),
             DB = pjoin(OUT, "mmseqs", "DB/DB"),
@@ -253,7 +253,7 @@ rule mmseqs:
 
     mmseqs convert2fasta {params.DB_clu_rep} {output.DB_clu_rep_fasta}
 
-    ## rename repseq to only use first dup sequence from bbmap
+    ## rename repseq to only use first dup sequence from bbtools_dedupe
     # flatten clu.tsv file so each row is one repseq and one seq
     python3 {config[scriptdir]}/scripts/flatten_mmseqs_tsv.py {output.DB_clu_tsv} | sort -u > {output.flat_DB_clu_tsv}
     # rename representative_seqs.fasta
@@ -411,7 +411,7 @@ rule all:
     input: GENOMADALL = expand(rules.genomad.output.fna, sample=SAMPLES),
            CHECKVALL = expand(rules.checkv_filter.output, sample=SAMPLES),
            VERSEGALL = expand(rules.verse_genomad.output.readcounts_virus, sample=SAMPLES),
-           BBMAPALL = rules.bbmap.output.unique_seqs,
+           BBTOOLS_DEDUPEALL = rules.bbtools_dedupe.output.unique_seqs,
 	   MMSEQSALL = rules.mmseqs.output.DB_clu_rep_fasta,
            VOTUALL = rules.votu.output.votu,
            IPHOPALL = rules.iphop.output,
