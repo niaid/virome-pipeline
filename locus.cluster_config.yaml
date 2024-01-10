@@ -54,14 +54,16 @@ votu:
   log: 'logs'
   jobname: 'all'
 
-
 vs4dramv:
   modules: virsorter/2.2.3-Python-3.8.10
 
 dramv:
   h_vmem: 3G
-  modules:
-    - /hpcdata/bcbb/shared/microbiome_share/modules/dram/1.4.6_ms
+  modules: /hpcdata/bcbb/shared/microbiome_share/modules/dram/1.4.6_ms
+
+amgs:
+  h_vmem: 3G
+  modules: /hpcdata/bcbb/shared/microbiome_share/modules/dram/1.4.6_ms
 
 iphop:
   h_vmem: 15G
