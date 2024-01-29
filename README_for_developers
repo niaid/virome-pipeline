@@ -89,6 +89,8 @@ diamond
 
 •	diamond database (diamonddb): /hpcdata/bio_data/DIAMOND_ncbi_db/nr.diamond.dmnd
 
+Database version is diamond v0.9.28.129
+
 •	https://github.com/bbuchfink/diamond
 
 
