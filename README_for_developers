@@ -21,8 +21,9 @@ Genomad:
   or with the command below, but that might be the most updated version. (We should maybe update) 
   
 ```
-  genomad download-database . 
-  
+
+genomad download-database . 
+
 ```
 
 •	https://portal.nersc.gov/genomad/installation.html
