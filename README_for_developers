@@ -22,6 +22,7 @@ Genomad:
   
 ```
   genomad download-database . 
+  
 ```
 
 •	https://portal.nersc.gov/genomad/installation.html
