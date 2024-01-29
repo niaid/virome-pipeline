@@ -1,0 +1,86 @@
+DiscoVir: virome pipeline
+
+Files for running pipeline in LOCUS 
+
+•	Snakefile: pipeline script (reads in configs, commands for each pipeline step/rule)
+•	cluster_setup.smk: helper script for reading in cluster config file
+•	project_config.yaml: for snakemake --configfile option. config file with details for a specific project - working/input/output directories, path to scripts and other configs, sample names, options for specific rules in the pipeline, etc.
+•	locus.cluster_config.yaml: cluster configuration file for snakemake --cluster-config option. specifically for NIAID Locus HPC which uses UGE. (sets parameters for qsub command for each rule's job, and which environment modules to use)
+•	locus_submit_vp.sh: batch job submit script for running the pipeline on Locus
+•	scripts: see scripts README
+
+
+Packages and versions (also found in locus_config.yaml)  
+
+Genomad:
+•	genomad/1.5.2
+
+•	genomad database (genomaddb): /hpcdata/bio_data/genomad/genomad_db/
+
+•	https://portal.nersc.gov/genomad/installation.html
+
+Verse:
+•	Verse/0.1.5
+•	Python/3.9.5-GCCcore-10.3.0
+
+•	https://github.com/qinzhu/VERSE
+
+checkV
+
+•	checkv/0.8.1
+•	Python/2.7.15-foss-2018b
+
+•	checkv database (checkvdb): /hpcdata/bio_data/checkv/checkv-db-v1.5
+
+•	https://bitbucket.org/berkeleylab/checkv/src/master/
+
+Seqtk
+
+•	Seqtk/1.3.r106
+
+•	https://github.com/lh3/seqtk
+
+BBmap
+
+•	bbmap/38.90
+
+•	https://jgi.doe.gov/data-and-tools/software-tools/bbtools/bb-tools-user-guide/installation-guide/
+
+Mmseqs2
+• mmseqs2/14.7e284
+•	Python/3.9.5-GCCcore-10.3.0
+
+•	https://github.com/soedinglab/MMseqs2
+
+Virsorter2
+
+•	package: virsorter/2.2.3-Python-3.8.10
+
+•	https://github.com/jiarong/VirSorter2
+
+dram 
+
+•	dram/1.4.6_ms 
+
+•	dram database: /hpcdata/bcbb/shared/microbiome_share/modules/dram/1.4.6_ms
+
+• https://github.com/WrightonLabCSU/DRAM
+
+iphop
+
+•	iphop/1.3.0
+
+•	iphop database: /hpcdata/bio_data/iphop/Sept_2021_pub_rw/
+
+•	https://bitbucket.org/srouxjgi/iphop/src/main/
+
+diamond 
+
+•	diamond/2.0.15.153
+
+•	diamond database (diamonddb): /hpcdata/bio_data/DIAMOND_ncbi_db/nr.diamond.dmnd
+
+•	https://github.com/bbuchfink/diamond
+
+
+
