@@ -16,6 +16,13 @@ Genomad:
 •	genomad/1.5.2
 
 •	genomad database (genomaddb): /hpcdata/bio_data/genomad/genomad_db/
+  version 1.3 is what we are currently using. There is a updated version (1.5). 
+  The databases can be download directly from https://zenodo.org/records/8339387
+  or with the command below, but that might be the most updated version. (We should maybe update) 
+  
+```
+  genomad download-database . 
+```
 
 •	https://portal.nersc.gov/genomad/installation.html
 
