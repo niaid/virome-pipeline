@@ -18,7 +18,7 @@ with open(infile, 'r') as f:
     for line in f:
         l = line.split()
         seqs = l[0].split(">")
-        seqs = list(set(seqs + l[1].split(">")))
+        seqs = seqs + l[1].split(">")
         rep = seqs[0]
         for s in seqs:
             print(rep, s, sep='\t')
