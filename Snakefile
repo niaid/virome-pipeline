@@ -346,7 +346,8 @@ rule dramv:
     envmodules: clust_conf["dramv"]["modules"]
     input: fasta = rules.checkv.output.fna
     params: outdir = pjoin(SOUT, "dramv")
-    output: genes = pjoin(SOUT, "dramv/dramv-annotate/genes.faa")
+    output: genes = pjoin(SOUT, "dramv/dramv-annotate/genes.faa"),
+            gff = pjoin(SOUT, "dramv/dramv-annotate/genes.gff")
 
     shell:"""
     ## DRAM-v annotation of viral sequences
@@ -414,6 +415,33 @@ rule verse_dramv:
 
     """
 
+rule gene_tables:
+    threads: clust_conf["gene_tables"]["threads"]
+    envmodules: clust_conf["gene_tables"]["modules"]
+    input: abund = expand(rules.verse_dramv.output.readcounts_genes, sample=SAMPLES)
+    params: outdir = pjoin(OUT, "gene_tables"),
+            samp = SAMPLES,
+            samplelist = pjoin(OUT, "gene_tables", "samplelist.txt"),
+            workingdir = OUT
+    output: pfam = pjoin(OUT, "gene_tables", "dramv_pfam_hits_cpm.tsv"),
+            vogdb = pjoin(OUT, "gene_tables", "dramv_vogdb_hits_cpm.tsv")
+    shell:"""
+    ## make abundance tables for dramv and diamond genes over all samples
+
+    ## cleanup possible previous failed run
+    rm -rf {params.outdir}
+    mkdir -p {params.outdir}
+
+    ## make input sample list for script
+    echo "{params.samp}" >{params.samplelist}
+    tr " " "\\n" <{params.samplelist} >{params.outdir}/temp && mv {params.outdir}/temp {params.samplelist}
+
+    python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c pfam_hits >{output.pfam}
+    python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c vogdb_id -c vogdb_hits >{output.vogdb}
+
+    rm {params.samplelist}
+
+    """
 
 
 
@@ -436,6 +464,7 @@ rule iphop:
     iphop predict --fa_file {input.fasta} --db_dir {config[iphopdb]} \
 	--out_dir {params.outdir} -t {threads}
 
+    ## remove working dir
     rm -rf {params.outdir}/Wdir
 
     """
@@ -492,5 +521,6 @@ rule all:
            DIAMALL = expand(rules.diamond.output, sample=SAMPLES) if DIAMOND_DB_NAME else [],
            DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
            VERSEDALL = expand(rules.verse_dramv.output.readcounts_genes, sample=SAMPLES),
+           GENETABLESALL = rules.gene_tables.output.vogdb,
            VS4DRAMVALL = expand(rules.vs4dramv.output, sample=SAMPLES),
            AMGSALL = expand(rules.amgs.output, sample=SAMPLES)
