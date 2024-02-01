@@ -295,7 +295,7 @@ rule votu:
 rule vs4dramv:
     threads: clust_conf["vs4dramv"]["threads"]
     envmodules: clust_conf["vs4dramv"]["modules"]
-    input: rules.checkv.output.fna
+    input: rules.checkv_filter.output
     params: outdir = pjoin(SOUT, "vs2")
     output: fasta = pjoin(SOUT, "vs2/for-dramv/final-viral-combined-for-dramv.fa"),
             tab = pjoin(SOUT, "vs2/for-dramv/viral-affi-contigs-for-dramv.tab")
@@ -344,7 +344,7 @@ rule amgs:
 rule dramv:
     threads: clust_conf["dramv"]["threads"]
     envmodules: clust_conf["dramv"]["modules"]
-    input: fasta = rules.checkv.output.fna
+    input: fasta = rules.checkv_filter.output
     params: outdir = pjoin(SOUT, "dramv")
     output: genes = pjoin(SOUT, "dramv/dramv-annotate/genes.faa"),
             gff = pjoin(SOUT, "dramv/dramv-annotate/genes.gff")
