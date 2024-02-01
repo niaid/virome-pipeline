@@ -61,6 +61,14 @@ dramv:
   h_vmem: 3G
   modules: /hpcdata/bcbb/shared/microbiome_share/modules/dram/1.4.6_ms
 
+verse_dramv:
+  threads: 8
+  h_vmem: 5G
+  modules:
+    - verse/0.1.5
+    - Python/3.9.5-GCCcore-10.3.0
+    - liftoff/1.6.3-Python-3.9.12
+
 amgs:
   h_vmem: 3G
   modules: /hpcdata/bcbb/shared/microbiome_share/modules/dram/1.4.6_ms

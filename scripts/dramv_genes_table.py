@@ -17,6 +17,7 @@ parser.add_argument("samplelist", help="file containing list of samples - should
 parser.add_argument("-d", "--dramv", help="which dramv directory do you want to use the annotations from. e.g. dramv or amgs (default: %(default)s)", default="dramv")
 parser.add_argument("-c", "--column", help=f"columns in dramv annotations file from which to make the gene table. can use more than once for more than one column (default: {default_column})", nargs='*', action='append')
 parser.add_argument("-v", "--value", help="what value from abundance file to fill in the table (default: %(default)s)", choices = ['count', 'cpm', 'rpk'], default = 'count')
+parser.add_argument("-s", "--suffix", help="suffix for file with abundances (default: %(default)s)", default = "_dramv.count.gene.cpm.txt")
 args = parser.parse_args()
 
 ## deal with column arg
@@ -56,7 +57,7 @@ with open(args.samplelist, 'r') as f:
     samples = f.read().splitlines()
 
 ## make list of sample files and dramv annotation files
-abundlist = {sample: os.path.join(args.pipelinedir, sample, "verse_dramv", sample + "_genes.count.CDS.cpm.txt") for sample in samples}
+abundlist = {sample: os.path.join(args.pipelinedir, sample, "verse_dramv", sample + args.suffix) for sample in samples}
 annolist = {sample: os.path.join(args.pipelinedir, sample, args.dramv, "dramv-annotate", "annotations.tsv") for sample in samples}
 
 annotabs = {sample: read_annotate(annolist[sample], args.column, sample) for sample in samples}
@@ -64,8 +65,6 @@ annotabs = {sample: read_annotate(annolist[sample], args.column, sample) for sam
 abundtabs = [read_abund(abundlist[sample], annotabs[sample], args.value, sample) for sample in samples]
 
 longtab = pd.concat(abundtabs)
-
-# print(longtab.tail(), file=sys.stderr)
 
 finaltab = pd.pivot_table(longtab, values = args.value, index = args.column, columns = 'sample', fill_value=0, aggfunc='sum')
 finaltab.to_csv(sys.stdout, sep = "\t")

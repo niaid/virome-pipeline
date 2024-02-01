@@ -364,6 +364,59 @@ rule dramv:
 
     """
 
+rule verse_dramv:
+    threads: clust_conf["verse_dramv"]["threads"]
+    envmodules: *clust_conf["verse_dramv"]["modules"]
+    input:  gff = rules.dramv.output.gff,
+            target = pjoin(IN, "{sample}" + config["assembly_suffix"]),
+            reference = rules.vs4dramv.output.fasta if (config["dramv_amg"]) else rules.checkv_filter.output,
+            bam = ancient(pjoin(IN, "{sample}" + config["bam_suffix"]))
+    params: outdir = pjoin(SOUT, "verse_dramv"),
+            intermdir = pjoin(SOUT, "verse_dramv", "intermediate_files"),
+            prefix_genes = pjoin(SOUT, "verse_dramv", "{sample}_dramv.count"),
+            counts_only_genes = pjoin(SOUT, "verse_dramv", "{sample}_dramv.count.gene.txt"),
+            liftoff_gff = pjoin(SOUT, "verse_dramv", "{sample}.dramv_genes.liftoff.gff")
+    output: readcounts_genes = pjoin(SOUT, "verse_dramv", "{sample}_dramv.count.gene.cpm.txt")
+    shell:"""
+    ## lift gene features from trimmed contigs to original with liftoff and estimate gene abundances with verse
+    liftoff -V
+    verse -v
+    
+
+    ## cleanup possible previous run
+    rm -rf {params.outdir}
+    mkdir -p {params.intermdir}
+
+    # make chrom file
+    grep -v -w "##gff-version" {input.gff} | grep -v -e "^#" | awk '{{ print $1 }}' >{params.intermdir}/1.txt
+    cat {params.intermdir}/1.txt | sed 's/|.*//' | sed "s/\(.*\)_{wildcards.sample}/\\1/"  >{params.intermdir}/2.txt
+    paste -d "," {params.intermdir}/1.txt {params.intermdir}/2.txt | sort -u >{params.intermdir}/chroms.txt
+    
+
+    ## rename CDS features to gene as liftoff only transfers genes. 
+    sed $'s/\tCDS\t/\tgene\t/' < {input.gff} >{params.intermdir}/temp.gff
+
+    ## reduce -p parallel to 1 as sometimes
+    ## we get core dumps if the contigs are very large.
+    ## redirect output to a log file otherwise it overwhelms the main log
+    liftoff {input.target} {input.reference} -g {params.intermdir}/temp.gff -o {params.liftoff_gff} \
+          -u {params.outdir}/unmapped_features.txt -dir {params.intermdir} -p 1 \
+          -chroms {params.intermdir}/chroms.txt -exclude_partial -a 0.9 2>{params.outdir}/liftoff.log \
+          1>>{params.outdir}/liftoff.log
+
+
+    ## get reads counts
+    verse -a {params.liftoff_gff} -o {params.prefix_genes} -g ID -z 1 -t gene -l -T {threads} {input.bam}
+
+    python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_genes} >{output.readcounts_genes}
+    rm {params.counts_only_genes}
+    rm -rf {params.intermdir}
+
+    """
+
+
+
+
 rule iphop:
     threads: clust_conf["iphop"]["threads"]
     envmodules: *clust_conf["iphop"]["modules"]
@@ -382,6 +435,8 @@ rule iphop:
 
     iphop predict --fa_file {input.fasta} --db_dir {config[iphopdb]} \
 	--out_dir {params.outdir} -t {threads}
+
+    rm -rf {params.outdir}/Wdir
 
     """
 
@@ -436,5 +491,6 @@ rule all:
            IPHOPALL = rules.iphop.output,
            DIAMALL = expand(rules.diamond.output, sample=SAMPLES) if DIAMOND_DB_NAME else [],
            DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
+           VERSEDALL = expand(rules.verse_dramv.output.readcounts_genes, sample=SAMPLES),
            VS4DRAMVALL = expand(rules.vs4dramv.output, sample=SAMPLES),
            AMGSALL = expand(rules.amgs.output, sample=SAMPLES)
