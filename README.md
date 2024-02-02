@@ -1,4 +1,4 @@
-# virome-pipeline
+# DiscoVir
 
 written by Lauren Krausfeldt & Poorani Subramanian - bioinformatics@niaid.nih.gov
 
@@ -69,3 +69,5 @@ git clone https://github.com/pooranibcbb/virome-pipeline
 7. https://jgi.doe.gov/data-and-tools/software-tools/bbtools/bb-tools-user-guide/dedupe-guide/
 8. Steinegger, M., & Söding, J. (2017). MMseqs2 enables sensitive protein sequence searching for the analysis of massive data sets. Nature biotechnology, 35(11), 1026-1028. doi:[10.1038/nbt.3988](https://doi.org/10.1038/nbt.3988).
 9. Roux, S., Adriaenssens, E. M., Dutilh, B. E., Koonin, E. V., Kropinski, A. M., Krupovic, M., ... & Eloe-Fadrosh, E. A. (2019). Minimum information about an uncultivated virus genome (MIUViG). Nature biotechnology, 37(1), 29-37. doi:[10.1038/nbt.4306](https://doi.org/10.1038/nbt.4306).
+10. Shumate, A., & Salzberg, S. L. (2021). Liftoff: Accurate mapping of gene annotations. Bioinformatics, 37(12), 1639–1643. doi: [10.1093/bioinformatics/btaa1016](https://doi.org/10.1093/bioinformatics/btaa1016).
+
