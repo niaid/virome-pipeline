@@ -50,7 +50,9 @@ votu:
   threads: 2
   h_vmem: 4G
   extra: '-l quick'
-  modules: Python/3.9.5-GCCcore-10.3.0
+  modules:
+    - Python/3.9.5-GCCcore-10.3.0
+    - krona/2.7.1
   log: 'logs'
   jobname: 'all'
 
@@ -63,11 +65,19 @@ dramv:
 
 verse_dramv:
   threads: 8
-  h_vmem: 5G
+  h_vmem: 8G
   modules:
     - verse/0.1.5
     - Python/3.9.5-GCCcore-10.3.0
     - liftoff/1.6.3-Python-3.9.12
+
+gene_tables:
+  threads: 2
+  h_vmem: 4G
+  extra: '-l quick'
+  modules: Python/3.9.5-GCCcore-10.3.0
+  log: 'logs'
+  jobname: 'all'
 
 amgs:
   h_vmem: 3G
@@ -87,8 +97,3 @@ diamond:
   modules: diamond/2.0.15.153
   tmpdir: /tmp
   ## on Locus /tmp is on local disk but $TMP is not and for diamond this matters
-
-gene_tables:
-  threads: 8
-  modules:
-    - Python/3.9.5-GCCcore-10.3.0

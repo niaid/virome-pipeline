@@ -2,6 +2,7 @@
 
 import pandas as pd
 import argparse
+import os.path
 
 parser = argparse.ArgumentParser(
                     description='Convert vOTU and genomad virus summary to Krona import format')
@@ -9,6 +10,8 @@ parser.add_argument('votu',type=str,
                     help='vOTU table')
 parser.add_argument('summary',type=str,
                     help='path to repseq_genomad_virus_summary.tsv')
+parser.add_argument('outdir',type=str,
+                    help='path to output/temp dir for individual krona inputs')
 
 args = parser.parse_args()
 
@@ -23,7 +26,7 @@ def merge_and_write(v,t):
     v = v.join(t)
     # subset to get nonzero rows
     v = v[v[s] > 0]
-    v.to_csv('for_krona.' + s + '.txt', sep = '\t', index=False, header=False)
+    v.to_csv(os.path.join(args.outdir, s + '.txt'), sep = '\t', index=False, header=False)
 
 for sample in list(votu.columns):
     merge_and_write(votu[[sample]], tax)
