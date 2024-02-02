@@ -79,3 +79,26 @@ options:
                         genomad *_plasmid_genes.tsv file
 ```
 
+## [plotnine_heatmap.py](scripts/plotnine_heatmap.py)
+
+Uses the [plotnine](https://plotnine.readthedocs.io/en/stable/index.html) python library to make heatmap from csv table.
+
+```bash
+usage: plotnine_heatmap.py [-h] [-a ABUND] [-t TITLE] [-d DROPCOLS] inputfile outputfile
+
+This script uses the python library plotnine to make a heatmap from a csv table. The y-axis column should be the first one in the table after any columns are dropped.
+
+positional arguments:
+  inputfile             file with table from which to make heatmap
+  outputfile            filename of output pdf
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -a ABUND, --abund ABUND
+                        abundance value in table. used for labeling heatmap. the default is generic. (default: abund)
+  -t TITLE, --title TITLE
+                        Title of heatmap; double quoted
+  -d DROPCOLS, --dropcols DROPCOLS
+                        Columns to drop/remove before plotting - separated by commas; double quoted
+```
+
