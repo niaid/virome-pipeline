@@ -2,7 +2,7 @@
 
 - Most scripts require Python >= 3.9 and pandas
 
-## [make_votu_table.py](scripts/make_votu_table.py)
+## [make_votu_table.py](make_votu_table.py)
 
 makes vOTU table from clustered vOTUs based on read mapping abundances.  Can output read counts, counts per million, or reads per kilobase
 
@@ -26,7 +26,7 @@ options:
 
 
 
-## [repseq_genomad_annotations.py](scripts/repseq_genomad_annotations.py)
+## [repseq_genomad_annotations.py](repseq_genomad_annotations.py)
 
 makes table of taxonomic (and marker) gene annotations for representative sequences of vOTUs
 
@@ -44,7 +44,7 @@ options:
 
 
 
-## [genomad_virus2gff.py](scripts/genomad_virus2gff.py)
+## [genomad_virus2gff.py](genomad_virus2gff.py)
 
 Make gff-type table (gtf) from genomad summary output
 
@@ -63,7 +63,7 @@ options:
 
 
 
-## [genomad_genes2gff.py](scripts/genomad_genes2gff.py)
+## [genomad_genes2gff.py](genomad_genes2gff.py)
 
 Make gff-type table (gtf) from genomad *\*virus_genes.tsv* and optionally, *\*plasmid_genes.tsv* files.
 
@@ -79,7 +79,7 @@ options:
                         genomad *_plasmid_genes.tsv file
 ```
 
-## [plotnine_heatmap.py](scripts/plotnine_heatmap.py)
+## [plotnine_heatmap.py](plotnine_heatmap.py)
 
 Uses the [plotnine](https://plotnine.readthedocs.io/en/stable/index.html) python library to make heatmap from csv table.
 
