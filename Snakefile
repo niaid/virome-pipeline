@@ -493,7 +493,8 @@ rule gene_tables:
             workingdir = OUT
     output: pfam = pjoin(OUT, "gene_tables", "dramv_pfam_hits_cpm.tsv"),
             vogdb = pjoin(OUT, "gene_tables", "dramv_vogdb_hits_cpm.tsv"),
-            amgs = pjoin(OUT, "gene_tables", "dramv_amg_cpm.tsv")
+            amgs = pjoin(OUT, "gene_tables", "dramv_amg_cpm.tsv"),
+            amg_heatmap = pjoin(OUT, "gene_tables", "dramv_amg_heatmap_cpm.pdf")
     shell:"""
     ## make abundance tables for dramv and diamond genes over all samples
 
@@ -511,6 +512,9 @@ rule gene_tables:
 
     ## dramv-distill amg_summary abund tables
     python3 {config[scriptdir]}/scripts/dramv_amgs_table.py {params.workingdir} {params.samplelist} -v cpm >{output.amgs}
+
+    ## heatmap of amgs
+    python3 {config[scriptdir]}/scripts/plotnine_heatmap.py {output.amgs} {output.amg_heatmap} -t "Heatmap of AMGs" -d "gene_description" -a "cpm"
 
     rm {params.samplelist}
 
