@@ -56,7 +56,7 @@ inputdf = inputdf.set_index(y_axis)
 
 ## dimensions of plot
 width = max(inputdf.shape[1] / 4, 5)
-height = max((inputdf.shape[0] / 4) + 0.5, 5)
+height = max((inputdf.shape[0] / 6.25) + 0.5, 5)
 
 
 ## melt dataframe
@@ -72,4 +72,4 @@ if (args.title is not None):
 
 
 ## save to file
-ggp.save(filename=args.outputfile)
+ggp.save(filename=args.outputfile, limitsize=False)
