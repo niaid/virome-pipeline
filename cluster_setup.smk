@@ -18,4 +18,4 @@ with open(config["clusterfile"]) as f:
 
 ## temp directory
 TMP = clust_conf["__default__"]["tmpdir"]
-shell.prefix("export TMPDIR={TMP}; set -ve;")
+shell.prefix("export TMPDIR={TMP}; set -xe;")

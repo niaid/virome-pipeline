@@ -435,7 +435,7 @@ rule verse_dramv:
     envmodules: *clust_conf["verse_dramv"]["modules"]
     input:  gff = rules.dramv.output.gff,
             target = pjoin(IN, "{sample}" + config["assembly_suffix"]),
-            reference = rules.checkv_filter.output,
+            reference =  pjoin(SOUT, "dramv", "dramv-annotate", "scaffolds.fna"),
             bam = ancient(pjoin(IN, "{sample}" + config["bam_suffix"]))
     params: outdir = pjoin(SOUT, "verse_dramv"),
             intermdir = pjoin(SOUT, "verse_dramv", "intermediate_files"),
@@ -455,7 +455,7 @@ rule verse_dramv:
 
     # make chrom file
     grep -v -w "##gff-version" {input.gff} | grep -v -e "^#" | awk '{{ print $1 }}' >{params.intermdir}/1.txt
-    cat {params.intermdir}/1.txt | sed 's/|.*//' | sed "s/\(.*\)_{wildcards.sample}/\\1/"  >{params.intermdir}/2.txt
+    cat {params.intermdir}/1.txt | sed 's/|.*//' | sed "s/\(.*\)_{wildcards.sample}.*/\\1/"  >{params.intermdir}/2.txt
     paste -d "," {params.intermdir}/1.txt {params.intermdir}/2.txt | sort -u >{params.intermdir}/chroms.txt
     
 
