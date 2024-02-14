@@ -264,7 +264,7 @@ rule mmseqs:
 
 rule votu:
     threads: clust_conf["votu"]["threads"]
-    envmodules: clust_conf["votu"]["modules"]
+    envmodules: *clust_conf["votu"]["modules"]
     input: mmseqs = rules.mmseqs.output.flat_DB_clu_tsv,
            abund = expand(rules.verse_genomad.output.readcounts_virus, sample=SAMPLES),
            summ = expand(rules.genomad.output.summary, sample=SAMPLES)
@@ -274,6 +274,7 @@ rule votu:
     output: votu = pjoin(OUT, "votu", "vOTU_table.tsv"),
             gmdanno = pjoin(OUT, "votu", "repseq_genomad_virus_summary.tsv")
     shell:"""
+
     ## make vOTU table
     python3 --version
 
@@ -284,20 +285,23 @@ rule votu:
     ## vOTU table
     echo "{input.abund}" >{params.filelist}
     tr " " "\\n" <{params.filelist} >{params.outdir}/temp && mv {params.outdir}/temp {params.filelist}
-    python3 {config[scriptdir]}/scripts/make_votu_table.py {input.mmseqs} {params.filelist} >{output.votu}
+  
+  python3 {config[scriptdir]}/scripts/make_votu_table.py {input.mmseqs} {params.filelist} >{output.votu}
 
     ## collate genomad annotations
     echo "{input.summ}" | tr " " "\\n" >{params.summlist}
-    python3 {config[scriptdir]}/scripts/repseq_genomad_annotations.py {output.votu} {params.summlist} >{output.gmdanno}
+    python3 {config[scriptdir]}/scripts/repseq_genomad_annotations.py {output.votu} \
+        {params.summlist} >{output.gmdanno}
 
-    ## make krona charts
+    # make krona charts
     mkdir -p {params.outdir}/temp1
     python3 {config[scriptdir]}/scripts/format_genomad_and_votu_for_krona.py {output.votu} {output.gmdanno} {params.outdir}/temp1
     ktImportText -o {params.outdir}/vOTU.krona.html {params.outdir}/temp1/*.txt
 
+  
     ## cleanup
     rm -f {params.filelist}
-    rm -f {params.summmlist}
+    rm -f {params.summlist}
     rm -rf {params.outdir}/temp1
 
     """
@@ -412,7 +416,8 @@ rule dramv:
     input: fasta = rules.checkv_filter.output
     params: outdir = pjoin(SOUT, "dramv")
     output: genes = pjoin(SOUT, "dramv/dramv-annotate/genes.faa"),
-            gff = pjoin(SOUT, "dramv/dramv-annotate/genes.gff")
+            gff = pjoin(SOUT, "dramv/dramv-annotate/genes.gff"),
+            scaffolds = pjoin(SOUT, "dramv/dramv-annotate/scaffolds.fna")
 
     shell:"""
     ## DRAM-v annotation of viral sequences
@@ -435,7 +440,7 @@ rule verse_dramv:
     envmodules: *clust_conf["verse_dramv"]["modules"]
     input:  gff = rules.dramv.output.gff,
             target = pjoin(IN, "{sample}" + config["assembly_suffix"]),
-            reference =  pjoin(SOUT, "dramv", "dramv-annotate", "scaffolds.fna"),
+            reference =  rules.dramv.output.scaffolds,
             bam = ancient(pjoin(IN, "{sample}" + config["bam_suffix"]))
     params: outdir = pjoin(SOUT, "verse_dramv"),
             intermdir = pjoin(SOUT, "verse_dramv", "intermediate_files"),
@@ -493,8 +498,9 @@ rule gene_tables:
             workingdir = OUT
     output: pfam = pjoin(OUT, "gene_tables", "dramv_pfam_hits_cpm.tsv"),
             vogdb = pjoin(OUT, "gene_tables", "dramv_vogdb_hits_cpm.tsv"),
-            amgs = pjoin(OUT, "gene_tables", "dramv_amg_cpm.tsv"),
+            amgs = pjoin(OUT, "gene_tables", "dramv_amg_cpm.tsv")
             amg_heatmap = pjoin(OUT, "gene_tables", "dramv_amg_heatmap_cpm.pdf")
+            
     shell:"""
     ## make abundance tables for dramv and diamond genes over all samples
 
@@ -514,7 +520,8 @@ rule gene_tables:
     python3 {config[scriptdir]}/scripts/dramv_amgs_table.py {params.workingdir} {params.samplelist} -v cpm >{output.amgs}
 
     ## heatmap of amgs
-    python3 {config[scriptdir]}/scripts/plotnine_heatmap.py {output.amgs} {output.amg_heatmap} -t "Heatmap of AMGs" -d "gene_description" -a "cpm"
+    python3 {config[scriptdir]}/scripts/plotnine_heatmap.py {output.amgs} {output.amg_heatmap} \
+            -t "Heatmap of AMGs" -d "gene_description" -a "cpm"
 
     rm {params.samplelist}
 
