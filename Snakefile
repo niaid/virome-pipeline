@@ -182,7 +182,7 @@ rule checkv_filter:
     ## cleanup possible previous run
     rm -rf {output}
 
-    Echo "Filtering viral genomes by quality for {wildcards.sample}."
+    echo "Filtering viral genomes by quality for {wildcards.sample}."
 
     if [ "{params.checkv_q}" = "complete" ]; then
        grep -e "Complete" {input.qsum} | awk '{{ print $1 }}' >{params.tempclist}
