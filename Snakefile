@@ -82,7 +82,12 @@ rule genomad:
 
 
     ## run genomad
-    genomad end-to-end {params.genomad_filter} --enable-score-calibration --cleanup --threads {threads} $renamed_assembly {params.outdir} {config[genomaddb]}
+
+    echo "Looking for viruses in {wildcards.sample} using geNomad."
+
+    genomad end-to-end {params.genomad_filter} --enable-score-calibration --cleanup --threads {threads} $renamed_assembly {params.outdir} {config[genomaddb]} 1>>genomad.log
+
+    echo "geNomad finished for sample {wildcards.sample}"
 
     rm $renamed_assembly
 
@@ -111,6 +116,7 @@ rule verse_genomad:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
+    echo "Estimating abundances of genes from geNomad for {wildcards.sample} with verse." 
 
     ## make gff from virus genes files
     python3 {config[scriptdir]}/scripts/genomad_genes2gff.py {input.genes} -m {input.headermap} >{params.prefix_genes}.gff
@@ -120,8 +126,12 @@ rule verse_genomad:
 
     ## make gff from virus summary; use default -z 1 instead of -z 5
     python3 {config[scriptdir]}/scripts/genomad_virus2gff.py {input.virus} -m {input.headermap} >{params.prefix_virus}.gff
-    verse -a {params.prefix_virus}.gff -o {params.prefix_virus} -g ID -z 1 -t CDS -l -T {threads} {input.bam}
+    verse -a {params.prefix_virus}.gff -o {params.prefix_virus} -g ID -z 1 -t CDS -l -T {threads} {input.bam} 1>>verse_genomad.log
+
+    echo "Estimating viral abundances for {wildcards.sample} with verse." 
+
     python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_virus} >{output.readcounts_virus}
+
 
     """
 
@@ -140,9 +150,13 @@ rule checkv:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-    checkv end_to_end {input} {params.outdir} -d {config[checkvdb]} -t {threads}
+    echo "Checking quality and completeness of viral genomes in {wildcards.sample} with checkV."
+
+    checkv end_to_end {input} {params.outdir} -d {config[checkvdb]} -t {threads} 1>>checkv.log
 
     cat {params.outdir}/proviruses.fna {params.outdir}/viruses.fna >{output.fna}
+
+    echo "CheckV finished for {wildcards.sample}."
 
     """
 
@@ -168,6 +182,7 @@ rule checkv_filter:
     ## cleanup possible previous run
     rm -rf {output}
 
+    Echo "Filtering viral genomes by quality for {wildcards.sample}."
 
     if [ "{params.checkv_q}" = "complete" ]; then
        grep -e "Complete" {input.qsum} | awk '{{ print $1 }}' >{params.tempclist}
@@ -205,10 +220,16 @@ rule bbtools_dedupe:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
+    echo "Starting vOTU generation."
+  
+    echo "Collecting viral genomes from all samples." 
+
     cat {input} >{params.input_ctgs}
 
+    echo "Deduplicating viral genomes."
+
     dedupe.sh in={params.input_ctgs} out={output.unique_seqs} csf={params.stats} minscaf={config[vs_min_length]} \
-	mergenames=t ex=f usejni=t threads={threads}
+	mergenames=t ex=f usejni=t threads={threads} 1>>bbtools_dedupe.log
 
 
     """
@@ -238,26 +259,33 @@ rule mmseqs:
 
     mkdir {params.DB_dir}
 
-    mmseqs createdb {input} {params.DB}
+    echo "Clustering unique viral genomes with 95% identity and 85% coverage to generate vOTUs."
+
+    mmseqs createdb {input} {params.DB} 1>>mmseqs2.log
 
     mmseqs cluster {params.DB} {params.DB_clu} $TMPDIR --cov-mode 1 -c 0.85 \
-	--min-seq-id 0.95 --cluster-mode 2 --threads {threads}
+	--min-seq-id 0.95 --cluster-mode 2 --threads {threads} 1>>mmseqs2.log
 
-    mmseqs createtsv {params.DB} {params.DB} {params.DB_clu} {output.DB_clu_tsv} --threads {threads}
+    mmseqs createtsv {params.DB} {params.DB} {params.DB_clu} {output.DB_clu_tsv} \
+        --threads {threads} 1>>mmseqs2.log
 
-    mmseqs createseqfiledb {params.DB} {params.DB_clu} {params.DB_clu_seq} --threads {threads}
+    mmseqs createseqfiledb {params.DB} {params.DB_clu} {params.DB_clu_seq} \
+        --threads {threads} 1>>mmseqs2.log
 
-    mmseqs result2flat {params.DB} {params.DB} {params.DB_clu_seq} {params.DB_clu_fasta}
+    mmseqs result2flat {params.DB} {params.DB} {params.DB_clu_seq} \
+        {params.DB_clu_fasta} 1>>mmseqs2.log
 
-    mmseqs createsubdb {params.DB_clu} {params.DB} {params.DB_clu_rep}
+    mmseqs createsubdb {params.DB_clu} {params.DB} {params.DB_clu_rep} 1>>mmseqs2.log
 
-    mmseqs convert2fasta {params.DB_clu_rep} {output.DB_clu_rep_fasta}
+    mmseqs convert2fasta {params.DB_clu_rep} {output.DB_clu_rep_fasta} 1>>mmseqs2.log
 
     ## rename repseq to only use first dup sequence from bbtools_dedupe
     # flatten clu.tsv file so each row is one repseq and one seq
     python3 {config[scriptdir]}/scripts/flatten_mmseqs_tsv.py {output.DB_clu_tsv} | sort -u > {output.flat_DB_clu_tsv}
     # rename representative_seqs.fasta
     sed '/^>/ s!>[^>]*!!2g' {output.DB_clu_rep_fasta} >{output.renamed_DB_clu_rep_fasta}
+
+    echo "Generation of vOTUs finished."
 
 
     """
@@ -283,6 +311,9 @@ rule votu:
     mkdir -p {params.outdir}
 
     ## vOTU table
+
+    echo "Creating vOTU abundance table." 
+
     echo "{input.abund}" >{params.filelist}
     tr " " "\\n" <{params.filelist} >{params.outdir}/temp && mv {params.outdir}/temp {params.filelist}
   
@@ -321,9 +352,13 @@ rule vs4dramv:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
+    echo "Running all viral genomes from {wildcards.sample} through Virsorter2.0 to look for AMGs."
+
     virsorter run --seqname-suffix-off --viral-gene-enrich-off --provirus-off \
         --prep-for-dramv -i {input} -w {params.outdir} --include-groups dsDNAphage,ssDNA,NCLDV \
-        --min-length {config[vs_min_length]} --min-score 0.5 -j {threads} all
+        --min-length {config[vs_min_length]} --min-score 0.5 -j {threads} all 1>>vs2.log
+
+    echo "Virsorter2.0 finished for {wildcards.sample}."
 
     """
 
@@ -346,6 +381,8 @@ rule amgs:
     ## cleanup possible previous failed run
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
+
+   echo "Annotating all viral genomes from {wildcards.sample} with dramv to look for AMGs."
     
         DRAM-v.py annotate -i {input.fasta} \
         -v {input.tab} \
@@ -353,8 +390,9 @@ rule amgs:
         --threads {threads} --min_contig_size {config[vs_min_length]}
        
         DRAM-v.py distill -i {params.outdir}/dramv-annotate/annotations.tsv \
-        -o {params.outdir}/dramv-distill
+        -o {params.outdir}/dramv-distill 1>>amgs.log
 
+    echo "dramv for amgs from {wildcards.sample} finished."
 
     """
 
@@ -381,6 +419,8 @@ rule verse_amgs:
     rm -rf {params.outdir}
     mkdir -p {params.intermdir}
 
+    echo "Calculating AMG abundances." 
+
     # make chrom file
     grep -v -w "##gff-version" {input.gff} | grep -v -e "^#" | awk '{{ print $1 }}' | sort -u >{params.intermdir}/1.txt
     cat {params.intermdir}/1.txt | sed "s/\(.*\)_{wildcards.sample}.*/\\1/"  >{params.intermdir}/2.txt
@@ -400,7 +440,8 @@ rule verse_amgs:
     sed 's/\"//g' {params.liftoff_gff} >{params.outdir}/temp.liftoff.gff && mv {params.outdir}/temp.liftoff.gff {params.liftoff_gff}
 
     ## run verse
-    verse -a {params.liftoff_gff} -o {params.prefix_genes} -g ID -z 1 -t gene -l -T 8 {input.bam}
+    verse -a {params.liftoff_gff} -o {params.prefix_genes} -g ID -z 1 -t gene \
+        -l -T 8 {input.bam} 1>>verse_amgs.log
 
     ## calc cpms
     python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_genes} >{output.readcounts_genes}
@@ -428,10 +469,13 @@ rule dramv:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
+    echo "Running dramv on all viral sequences from geNomad in {wildcards.sample} for functional annotation." 
   
         DRAM-v.py annotate -i {input.fasta} \
         -o {params.outdir}/dramv-annotate --skip_trnascan \
-        --threads {threads} --min_contig_size {config[vs_min_length]}
+        --threads {threads} --min_contig_size {config[vs_min_length]} 1>>dramv.log
+
+    echo "dramv for functional annotation on viral genomes from geNomad in {wildcards.sample} finished." 
 
     """
 
@@ -458,6 +502,8 @@ rule verse_dramv:
     rm -rf {params.outdir}
     mkdir -p {params.intermdir}
 
+   echo "Calculating genes abundances after functional annotation using dramv." 
+
     # make chrom file
     grep -v -w "##gff-version" {input.gff} | grep -v -e "^#" | awk '{{ print $1 }}' >{params.intermdir}/1.txt
     cat {params.intermdir}/1.txt | sed 's/|.*//' | sed "s/\(.*\)_{wildcards.sample}.*/\\1/"  >{params.intermdir}/2.txt
@@ -479,7 +525,7 @@ rule verse_dramv:
     sed 's/\"//g' {params.liftoff_gff} >{params.outdir}/temp.liftoff.gff && mv {params.outdir}/temp.liftoff.gff {params.liftoff_gff}
 
     ## get reads counts
-    verse -a {params.liftoff_gff} -o {params.prefix_genes} -g ID -z 1 -t gene -l -T {threads} {input.bam}
+    verse -a {params.liftoff_gff} -o {params.prefix_genes} -g ID -z 1 -t gene -l -T {threads} {input.bam} 1>>verse_dramv.log
 
     python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_genes} >{output.readcounts_genes}
     rm {params.counts_only_genes}
@@ -498,7 +544,7 @@ rule gene_tables:
             workingdir = OUT
     output: pfam = pjoin(OUT, "gene_tables", "dramv_pfam_hits_cpm.tsv"),
             vogdb = pjoin(OUT, "gene_tables", "dramv_vogdb_hits_cpm.tsv"),
-            amgs = pjoin(OUT, "gene_tables", "dramv_amg_cpm.tsv")
+            amgs = pjoin(OUT, "gene_tables", "dramv_amg_cpm.tsv"),
             amg_heatmap = pjoin(OUT, "gene_tables", "dramv_amg_heatmap_cpm.pdf")
             
     shell:"""
@@ -513,10 +559,16 @@ rule gene_tables:
     tr " " "\\n" <{params.samplelist} >{params.outdir}/temp && mv {params.outdir}/temp {params.samplelist}
 
     ## dramv-annotate abund tables
+
+    echo "Collating abundances of VOGIDs and pfams from dramv functional annotation." 
+
     python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c pfam_hits >{output.pfam}
     python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c vogdb_id -c vogdb_hits >{output.vogdb}
 
     ## dramv-distill amg_summary abund tables
+
+echo "Collating abundances of AMGs." 
+
     python3 {config[scriptdir]}/scripts/dramv_amgs_table.py {params.workingdir} {params.samplelist} -v cpm >{output.amgs}
 
     ## heatmap of amgs
@@ -545,11 +597,15 @@ rule iphop:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
+    echo "Predicting viral hosts with iPHoP. This step may take a while." 
+
     iphop predict --fa_file {input.fasta} --db_dir {config[iphopdb]} \
-	--out_dir {params.outdir} -t {threads}
+	--out_dir {params.outdir} -t {threads} 1>>iphop.log
 
     ## remove working dir
     rm -rf {params.outdir}/Wdir
+
+    echo "iPHoP finished."
 
     """
 
@@ -574,20 +630,24 @@ rule diamond:
 
     ## cleanup possible previous failed run
     rm -rf {params.outdir}
-    mkdir -p {params.outdir}
+    mkdir -p {params.outdir} 
 
     ## https://github.com/bbuchfink/diamond/wiki/3.-Command-line-options#memory--performance-options
     mkdir -p {params.tempdir}
     trap 'rm -rvf {params.tempdir}' EXIT
 
+    echo "Annotating genes from geNomad for {wildcards.sample} against the nr database using diamond." 
+
     diamond blastp --threads {threads} --max-target-seqs 2 -b 13 --tmpdir {params.tempdir} \
             --query {input} --db {config[diamonddb]} \
-            --daa {params.outdir}/{params.s}.{params.dbname}.daa
+            --daa {params.outdir}/{params.s}.{params.dbname}.daa 1>>diamond.log
 
-    diamond view --threads {threads} --outfmt 6 qseqid pident qcovhsp scovhsp length mismatch gapopen qstart qend sstart send evalue bitscore stitle -a {params.outdir}/{params.s}.{params.dbname}.daa -o {output}
+    diamond view --threads {threads} --outfmt 6 qseqid pident qcovhsp scovhsp length mismatch gapopen qstart qend sstart send evalue bitscore stitle -a {params.outdir}/{params.s}.{params.dbname}.daa -o {output} 1>>diamond.log
 
     ## add header to file
     sed -i '1s;^;qseqid\\tpident\\tqcovhsp\\tscovhsp\\tlength\\tmismatch\\tgapopen\\tqstart\\tqend\\tsstart\\tsend\\tevalue\\tbitscore\\tstitle\\n;' {output}
+
+    echo "Diamond finished running for {wildcards.sample}."
 
     """
 
