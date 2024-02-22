@@ -28,10 +28,6 @@ checkv_q: all
 # min contig length for dramv and vOTU clustering
 vs_min_length: 1000
 
-# run DRAM-v distill to get amgs?  (requires running virsorter2 which removes many
-# putatively viral contigs and may reduce the number of non-amg annotations)
-dramv_amg: no
-
 #iphop
 iphopdb: /hpcdata/bio_data/iphop/Sept_2021_pub_rw/
 
