@@ -552,10 +552,14 @@ rule iphop:
 
     """
 
-if "diamonddb" in config:
-    DIAMOND_DB_NAME=os.path.splitext(os.path.basename(config["diamonddb"]))[0]
+## check if diamond db specified
+if config["run_diamond"]:
+    if ("diamonddb" not in config) or (config["diamonddb"] is None):
+        raise ValueError(f"run_diamond value in config is 'yes', but diamonddb config value is not specified")
+    else:
+        DIAMOND_DB_NAME=os.path.splitext(os.path.basename(config["diamonddb"]))[0]
 else:
-    DIAMOND_DB_NAME=None
+     DIAMOND_DB_NAME=None
 
 rule diamond:
     threads: clust_conf["diamond"]["threads"]
@@ -600,8 +604,8 @@ rule all:
            BBTOOLS_DEDUPEALL = rules.bbtools_dedupe.output.unique_seqs,
 	   MMSEQSALL = rules.mmseqs.output.DB_clu_rep_fasta,
            VOTUALL = rules.votu.output.votu,
-            IPHOPALL = rules.iphop.output if config["run_iphop"] else [],
-           DIAMALL = expand(rules.diamond.output, sample=SAMPLES) if DIAMOND_DB_NAME else [],
+           IPHOPALL = rules.iphop.output if config["run_iphop"] else [],
+           DIAMALL = expand(rules.diamond.output, sample=SAMPLES) if config["run_diamond"] else [],
            DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
            VERSEDALL = expand(rules.verse_dramv.output.readcounts_genes, sample=SAMPLES),
            GENETABLESALL = rules.gene_tables.output.vogdb,
