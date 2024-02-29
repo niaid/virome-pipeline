@@ -29,6 +29,9 @@ checkv_q: all
 vs_min_length: 1000
 
 #iphop
+# Run iPHoP?  It significantly increases run time and requires a lot
+# of memory
+run_iphop: no
 iphopdb: /hpcdata/bio_data/iphop/Sept_2021_pub_rw/
 
 # diamond db to annotate genes for eventual pathway inference - we use nr

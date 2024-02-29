@@ -600,7 +600,7 @@ rule all:
            BBTOOLS_DEDUPEALL = rules.bbtools_dedupe.output.unique_seqs,
 	   MMSEQSALL = rules.mmseqs.output.DB_clu_rep_fasta,
            VOTUALL = rules.votu.output.votu,
-           IPHOPALL = rules.iphop.output,
+            IPHOPALL = rules.iphop.output if config["run_iphop"] else [],
            DIAMALL = expand(rules.diamond.output, sample=SAMPLES) if DIAMOND_DB_NAME else [],
            DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
            VERSEDALL = expand(rules.verse_dramv.output.readcounts_genes, sample=SAMPLES),
