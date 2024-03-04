@@ -28,16 +28,24 @@ checkv_q: all
 # min contig length for dramv and vOTU clustering
 vs_min_length: 1000
 
-# run DRAM-v distill to get amgs?  (requires running virsorter2 which removes many
-# putatively viral contigs and may reduce the number of non-amg annotations)
-dramv_amg: no
+## amgs
+# run virsorter2 to filter contigs (this removes a lot)
+# and then run the sequences through DRAM-v to identify
+# AMGs
+run_amgs: yes
 
 #iphop
+# Run iPHoP?  yes/no
+# yes significantly increases run time and requires a lot
+# of memory
+run_iphop: no
 iphopdb: /hpcdata/bio_data/iphop/Sept_2021_pub_rw/
 
 # diamond db to annotate genes for eventual pathway inference - we use nr
-# to skip running diamond (which can take a long time) comment this line out (put # in front)
-# diamonddb: /hpcdata/bio_data/DIAMOND_ncbi_db/nr.diamond.dmnd
+# yes/no
+run_diamond: no
+# location of diamonddb
+diamonddb: /hpcdata/bio_data/DIAMOND_ncbi_db/nr.diamond.dmnd
 
 ### input files
 

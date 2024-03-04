@@ -541,12 +541,10 @@ rule gene_tables:
     params: outdir = pjoin(OUT, "gene_tables"),
             samp = SAMPLES,
             samplelist = pjoin(OUT, "gene_tables", "samplelist.txt"),
-            workingdir = OUT
+            workingdir = OUT,
+            amg_heatmap = pjoin(OUT, "gene_tables", "dramv_amg_heatmap_cpm.pdf")
     output: pfam = pjoin(OUT, "gene_tables", "dramv_pfam_hits_cpm.tsv"),
             vogdb = pjoin(OUT, "gene_tables", "dramv_vogdb_hits_cpm.tsv"),
-            amgs = pjoin(OUT, "gene_tables", "dramv_amg_cpm.tsv"),
-            amg_heatmap = pjoin(OUT, "gene_tables", "dramv_amg_heatmap_cpm.pdf")
-            
     shell:"""
     ## make abundance tables for dramv and diamond genes over all samples
 
@@ -565,6 +563,32 @@ rule gene_tables:
     python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c pfam_hits >{output.pfam}
     python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c vogdb_id -c vogdb_hits >{output.vogdb}
 
+    rm {params.samplelist}
+
+    """
+
+
+rule amg_tables:
+    threads: clust_conf["gene_tables"]["threads"]
+    envmodules: clust_conf["gene_tables"]["modules"]
+    input: amgs = expand(rules.verse_amgs.output.readcounts_genes, sample=SAMPLES)
+    params: outdir = pjoin(OUT, "gene_tables"),
+            samp = SAMPLES,
+            samplelist = pjoin(OUT, "gene_tables", "amg_samplelist.txt"),
+            workingdir = OUT,
+            amg_heatmap = pjoin(OUT, "gene_tables", "dramv_amg_heatmap_cpm.pdf")
+    output: amgs = pjoin(OUT, "gene_tables", "dramv_amg_cpm.tsv")
+    shell:"""
+
+    ## cleanup possible previous failed run
+    rm -f {output.amgs}
+    mkdir -p {params.outdir}
+
+    ## make input sample list for script
+    echo "{params.samp}" >{params.samplelist}
+    tr " " "\\n" <{params.samplelist} >{params.outdir}/temp_amgs && mv {params.outdir}/temp_amgs {params.samplelist}
+
+
     ## dramv-distill amg_summary abund tables
 
 echo "Collating abundances of AMGs." 
@@ -572,8 +596,8 @@ echo "Collating abundances of AMGs."
     python3 {config[scriptdir]}/scripts/dramv_amgs_table.py {params.workingdir} {params.samplelist} -v cpm >{output.amgs}
 
     ## heatmap of amgs
-    python3 {config[scriptdir]}/scripts/plotnine_heatmap.py {output.amgs} {output.amg_heatmap} \
-            -t "Heatmap of AMGs" -d "gene_description" -a "cpm"
+    # python3 {config[scriptdir]}/scripts/plotnine_heatmap.py {output.amgs} {params.amg_heatmap} \
+    #         -t "Heatmap of AMGs" -d "gene_description" -a "cpm" 
 
     rm {params.samplelist}
 
@@ -609,10 +633,14 @@ rule iphop:
 
     """
 
-if "diamonddb" in config:
-    DIAMOND_DB_NAME=os.path.splitext(os.path.basename(config["diamonddb"]))[0]
+## check if diamond db specified
+if config["run_diamond"]:
+    if ("diamonddb" not in config) or (config["diamonddb"] is None):
+        raise ValueError(f"run_diamond value in config is 'yes', but diamonddb config value is not specified")
+    else:
+        DIAMOND_DB_NAME=os.path.splitext(os.path.basename(config["diamonddb"]))[0]
 else:
-    DIAMOND_DB_NAME=None
+     DIAMOND_DB_NAME=None
 
 rule diamond:
     threads: clust_conf["diamond"]["threads"]
@@ -661,11 +689,10 @@ rule all:
            BBTOOLS_DEDUPEALL = rules.bbtools_dedupe.output.unique_seqs,
 	   MMSEQSALL = rules.mmseqs.output.DB_clu_rep_fasta,
            VOTUALL = rules.votu.output.votu,
-           IPHOPALL = rules.iphop.output,
-           DIAMALL = expand(rules.diamond.output, sample=SAMPLES) if DIAMOND_DB_NAME else [],
+           IPHOPALL = rules.iphop.output if config["run_iphop"] else [],
+           DIAMALL = expand(rules.diamond.output, sample=SAMPLES) if config["run_diamond"] else [],
            DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
            VERSEDALL = expand(rules.verse_dramv.output.readcounts_genes, sample=SAMPLES),
            GENETABLESALL = rules.gene_tables.output.vogdb,
-           VS4DRAMVALL = expand(rules.vs4dramv.output, sample=SAMPLES),
-           AMGSALL = expand(rules.amgs.output, sample=SAMPLES),
-           VERSEAMGSALL = expand(rules.verse_amgs.output, sample=SAMPLES)
+           VERSEAMGSALL = expand(rules.verse_amgs.output, sample=SAMPLES) if config["run_amgs"] else [],
+           AMGTABLESALL = rules.amg_tables.output.amgs if config["run_amgs"] else []

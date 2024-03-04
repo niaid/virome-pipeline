@@ -9,6 +9,7 @@ https://plotnine.readthedocs.io/en/stable/index.html
 
 import argparse
 import pandas as pd
+import sys
 
 from plotnine import (
     ggplot,
@@ -40,11 +41,15 @@ parser.add_argument("-t", "--title", help="Title of heatmap; double quoted")
 parser.add_argument("-d", "--dropcols", help="Columns to drop/remove before plotting - separated by commas; double quoted")
 args = parser.parse_args()
 
-# args = parser.parse_args(['/Users/subramanianp4/test/virome-pipeline/dramv_amg_cpm.txt', 'out.pdf', '--title=Heatmap of AMGs', "--dropcols=gene_description", "--abund=cpm"])
 print(args)
 
-# Load the CSV file
+## Load the CSV file
 inputdf = pd.read_csv(args.inputfile, sep='\t', index_col=False)
+
+## check if inputdf is empty
+if inputdf.size == 0:
+    print(f"WARNING: AMGs abundance file {args.inputfile} is empty. Heatmap will not be made.", file=sys.stderr)
+    sys.exit(0)
 
 if (args.dropcols is not None):
     todrop = args.dropcols.split(sep=',')
