@@ -94,6 +94,16 @@ verse_amgs:
     - Python/3.9.5-GCCcore-10.3.0
     - liftoff/1.6.3-Python-3.9.12
 
+amg_tables:
+  threads: 2
+  h_vmem: 4G
+  extra: '-l quick'
+  modules: Python/3.9.5-GCCcore-10.3.0
+  log: 'logs'
+  jobname: 'all'
+
+
+    
 iphop:
   h_vmem: 15G
   extra: '-l himem'
