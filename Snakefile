@@ -545,8 +545,8 @@ rule amg_tables:
     python3 {config[scriptdir]}/scripts/dramv_amgs_table.py {params.workingdir} {params.samplelist} -v cpm >{output.amgs}
 
     ## heatmap of amgs
-    # python3 {config[scriptdir]}/scripts/plotnine_heatmap.py {output.amgs} {params.amg_heatmap} \
-    #         -t "Heatmap of AMGs" -d "gene_description" -a "cpm" 
+    python3 {config[scriptdir]}/scripts/plotnine_heatmap.py {output.amgs} {params.amg_heatmap} \
+            -t "Heatmap of AMGs" -d "gene_description" -a "cpm" 
 
     rm {params.samplelist}
 
