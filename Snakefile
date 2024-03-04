@@ -515,12 +515,38 @@ rule gene_tables:
     python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c pfam_hits >{output.pfam}
     python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c vogdb_id -c vogdb_hits >{output.vogdb}
 
+    rm {params.samplelist}
+
+    """
+
+
+rule amg_tables:
+    threads: clust_conf["gene_tables"]["threads"]
+    envmodules: clust_conf["gene_tables"]["modules"]
+    input: amgs = expand(rules.verse_amgs.output.readcounts_genes, sample=SAMPLES)
+    params: outdir = pjoin(OUT, "gene_tables"),
+            samp = SAMPLES,
+            samplelist = pjoin(OUT, "gene_tables", "amg_samplelist.txt"),
+            workingdir = OUT,
+            amg_heatmap = pjoin(OUT, "gene_tables", "dramv_amg_heatmap_cpm.pdf")
+    output: amgs = pjoin(OUT, "gene_tables", "dramv_amg_cpm.tsv")
+    shell:"""
+
+    ## cleanup possible previous failed run
+    rm -f {output.amgs}
+    mkdir -p {params.outdir}
+
+    ## make input sample list for script
+    echo "{params.samp}" >{params.samplelist}
+    tr " " "\\n" <{params.samplelist} >{params.outdir}/temp_amgs && mv {params.outdir}/temp_amgs {params.samplelist}
+
+
     ## dramv-distill amg_summary abund tables
     python3 {config[scriptdir]}/scripts/dramv_amgs_table.py {params.workingdir} {params.samplelist} -v cpm >{output.amgs}
 
     ## heatmap of amgs
-    python3 {config[scriptdir]}/scripts/plotnine_heatmap.py {output.amgs} {params.amg_heatmap} \
-            -t "Heatmap of AMGs" -d "gene_description" -a "cpm"
+    # python3 {config[scriptdir]}/scripts/plotnine_heatmap.py {output.amgs} {params.amg_heatmap} \
+    #         -t "Heatmap of AMGs" -d "gene_description" -a "cpm" 
 
     rm {params.samplelist}
 
@@ -609,6 +635,5 @@ rule all:
            DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
            VERSEDALL = expand(rules.verse_dramv.output.readcounts_genes, sample=SAMPLES),
            GENETABLESALL = rules.gene_tables.output.vogdb,
-           VS4DRAMVALL = expand(rules.vs4dramv.output, sample=SAMPLES),
-           AMGSALL = expand(rules.amgs.output, sample=SAMPLES),
-           VERSEAMGSALL = expand(rules.verse_amgs.output, sample=SAMPLES)
+           VERSEAMGSALL = expand(rules.verse_amgs.output, sample=SAMPLES) if config["run_amgs"] else [],
+           AMGTABLESALL = rules.amg_tables.output.amgs if config["run_amgs"] else []
