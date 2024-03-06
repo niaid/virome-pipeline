@@ -628,6 +628,7 @@ rule iphop:
     envmodules: *clust_conf["iphop"]["modules"]
     input: fasta = rules.mmseqs.output.renamed_DB_clu_rep_fasta
     params: outdir = pjoin(OUT, "iphop")
+    log: pjoin(OUT, "iphop", "iphop.log")
     output: genes = pjoin(OUT, "iphop", "Host_prediction_to_genome_m90.csv")
 
     shell:"""
@@ -642,7 +643,7 @@ rule iphop:
     echo "Predicting viral hosts with iPHoP. This step may take a while." 
 
     iphop predict --fa_file {input.fasta} --db_dir {config[iphopdb]} \
-	--out_dir {params.outdir} -t {threads} 1>>iphop.log
+	--out_dir {params.outdir} -t {threads} 1>>{log}
 
     ## remove working dir
     rm -rf {params.outdir}/Wdir
