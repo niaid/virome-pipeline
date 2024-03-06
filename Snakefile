@@ -55,18 +55,22 @@ rule genomad:
     params: outdir = pjoin(SOUT, "genomad"),
             renamed_assembly = pjoin(SOUT, "genomad", "{sample}" + ".fasta"),
             genomad_filter = genomad_filter[config["genomad_filter"]]
+    log:    pjoin(SOUT, "genomad", "{sample}" + ".genomad.log")
     output: fna = pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus.fna"),
             genes = pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus_genes.tsv"),
             proteins =  pjoin(SOUT, "genomad", "{sample}_summary", "{sample}_virus_proteins.faa"),
             summary = pjoin(SOUT, "genomad", "{sample}_summary","{sample}_virus_summary.tsv"),
             assembly_headermap = pjoin(SOUT, "genomad", "{sample}" + "_assembly_headermap.txt")
     shell:"""
-    ## genomad search for viral contigs
-    genomad --version
-
     ## cleanup possible previous run
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
+
+    ## genomad search for viral contigs
+    genomad --version
+    genomad --version 1>>{log}
+
+
 
     ## rename assembly to sample.fasta so genomad uses sample as output file prefix
     ## also rename headers to include sample name, so we can track contigs when we combine all for clustering
@@ -83,9 +87,9 @@ rule genomad:
 
     ## run genomad
 
-    echo "Looking for viruses in {wildcards.sample} using geNomad."
+    echo "Looking for viruses in {wildcards.sample} using geNomad.  See log file {log}."
 
-    genomad end-to-end {params.genomad_filter} --enable-score-calibration --cleanup --threads {threads} $renamed_assembly {params.outdir} {config[genomaddb]} 1>>genomad.log
+    genomad end-to-end {params.genomad_filter} --enable-score-calibration --cleanup --threads {threads} $renamed_assembly {params.outdir} {config[genomaddb]} 1>>{log}
 
     echo "geNomad finished for sample {wildcards.sample}"
 
@@ -106,29 +110,31 @@ rule verse_genomad:
             counts_only_genes = pjoin(SOUT, "verse_genomad", "{sample}_virus_genes.count.CDS.txt"),
             prefix_virus = pjoin(SOUT, "verse_genomad", "{sample}_virus.count"),
             counts_only_virus = pjoin(SOUT, "verse_genomad", "{sample}_virus.count.CDS.txt")
+    log:    pjoin(SOUT, "verse_genomad", "{sample}" + ".verse_genomad.log")
     output: readcounts_genes = pjoin(SOUT, "verse_genomad", "{sample}_virus_genes.count.CDS.cpm.txt"),
             readcounts_virus = pjoin(SOUT, "verse_genomad", "{sample}_virus.count.CDS.cpm.txt")
     shell:"""
-    ## estimate gene abundances with verse
-    verse -v
-
     ## cleanup possible previous run
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-    echo "Estimating abundances of genes from geNomad for {wildcards.sample} with verse." 
+    ## estimate gene abundances with verse
+    verse -v
+    verse -v >>{log}
+
+    echo "Estimating abundances of genes from geNomad for {wildcards.sample} with verse. See log file {log}." 
 
     ## make gff from virus genes files
     python3 {config[scriptdir]}/scripts/genomad_genes2gff.py {input.genes} -m {input.headermap} >{params.prefix_genes}.gff
-    verse -a {params.prefix_genes}.gff -o {params.prefix_genes} -g ID -z 1 -t CDS -l -T {threads} {input.bam}
+    verse -a {params.prefix_genes}.gff -o {params.prefix_genes} -g ID -z 1 -t CDS -l -T {threads} {input.bam} 1>>{log}
 
     python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_genes} >{output.readcounts_genes}
 
+    echo "Estimating viral abundances for {wildcards.sample} with verse.  See log file {log}." 
+
     ## make gff from virus summary; use default -z 1 instead of -z 5
     python3 {config[scriptdir]}/scripts/genomad_virus2gff.py {input.virus} -m {input.headermap} >{params.prefix_virus}.gff
-    verse -a {params.prefix_virus}.gff -o {params.prefix_virus} -g ID -z 1 -t CDS -l -T {threads} {input.bam} 1>>verse_genomad.log
-
-    echo "Estimating viral abundances for {wildcards.sample} with verse." 
+    verse -a {params.prefix_virus}.gff -o {params.prefix_virus} -g ID -z 1 -t CDS -l -T {threads} {input.bam} 1>>{log}
 
     python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_virus} >{output.readcounts_virus}
 
@@ -141,6 +147,7 @@ rule checkv:
     envmodules: *clust_conf["checkv"]["modules"]
     input: rules.genomad.output.fna
     params: outdir = pjoin(SOUT, "checkv")
+    log: pjoin(SOUT, "checkv", "{sample}" + ".checkv.log")
     output: fna = pjoin(SOUT, "checkv", "combined.fna"),
             qsum = pjoin(SOUT, "checkv", "quality_summary.tsv")
     shell:"""
@@ -150,9 +157,12 @@ rule checkv:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-    echo "Checking quality and completeness of viral genomes in {wildcards.sample} with checkV."
+    checkv | head -n1
+    checkv | head -n1 >>{log}
 
-    checkv end_to_end {input} {params.outdir} -d {config[checkvdb]} -t {threads} 1>>checkv.log
+    echo "Checking quality and completeness of viral genomes in {wildcards.sample} with checkV.  See log file {log}."
+
+    checkv end_to_end {input} {params.outdir} -d {config[checkvdb]} -t {threads} 1>>{log}
 
     cat {params.outdir}/proviruses.fna {params.outdir}/viruses.fna >{output.fna}
 
@@ -211,16 +221,18 @@ rule bbtools_dedupe:
             input_ctgs = pjoin(OUT, "bbtools_dedupe", "all_input_contigs.fasta"),
 	    log = pjoin(OUT, "bbtools_dedupe", "log.txt"),
 	    stats = pjoin(OUT, "bbtools_dedupe", "cluster_stats.txt")
+    log:  pjoin(OUT, "bbtools_dedupe", "bbtools_dedupe.log")
     output: unique_seqs = pjoin(OUT, "bbtools_dedupe", "unique_seqs.fasta")
     shell:"""
     ## run bbtools_dedupe on all contigs to remove duplicates
-    dedupe.sh --version
 
     ## cleanup possible previous failed run
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-    echo "Starting vOTU generation."
+    dedupe.sh --version
+
+    echo "Starting vOTU generation. See log file {log}."
   
     echo "Collecting viral genomes from all samples." 
 
@@ -229,7 +241,7 @@ rule bbtools_dedupe:
     echo "Deduplicating viral genomes."
 
     dedupe.sh in={params.input_ctgs} out={output.unique_seqs} csf={params.stats} minscaf={config[vs_min_length]} \
-	mergenames=t ex=f usejni=t threads={threads} 1>>bbtools_dedupe.log
+	mergenames=t ex=f usejni=t threads={threads} 1>>{log}
 
 
     """
@@ -245,39 +257,41 @@ rule mmseqs:
 	    DB_clu_seq = pjoin(OUT, "mmseqs", "DB/DB_clu_seq"),
 	    DB_clu_fasta = pjoin(OUT, "mmseqs", "cluster_seqs.fasta"),
 	    DB_clu_rep = pjoin(OUT, "mmseqs", "DB/DB_clu_rep")
+    log: pjoin(OUT, "mmseqs", "mmseqs2.log")
     output: DB_clu_rep_fasta = pjoin(OUT, "mmseqs", "representative_seqs.fasta"),
             DB_clu_tsv = pjoin(OUT, "mmseqs", "DB_clu.tsv"),
             flat_DB_clu_tsv = pjoin(OUT, "mmseqs", "flat_DB_clu.tsv"),
             renamed_DB_clu_rep_fasta = pjoin(OUT, "mmseqs", "representative_seqs.renamed.fasta")
     shell:"""
     ## run mmseqs on all deduped genomes
-    mmseqs version
 
     ## cleanup possible previous failed run
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
+    mmseqs version
+
     mkdir {params.DB_dir}
 
-    echo "Clustering unique viral genomes with 95% identity and 85% coverage to generate vOTUs."
+    echo "Clustering unique viral genomes with 95% identity and 85% coverage to generate vOTUs.  See log file {log}."
 
-    mmseqs createdb {input} {params.DB} 1>>mmseqs2.log
+    mmseqs createdb {input} {params.DB} 1>>{log}
 
     mmseqs cluster {params.DB} {params.DB_clu} $TMPDIR --cov-mode 1 -c 0.85 \
-	--min-seq-id 0.95 --cluster-mode 2 --threads {threads} 1>>mmseqs2.log
+	--min-seq-id 0.95 --cluster-mode 2 --threads {threads} 1>>{log}
 
     mmseqs createtsv {params.DB} {params.DB} {params.DB_clu} {output.DB_clu_tsv} \
-        --threads {threads} 1>>mmseqs2.log
+        --threads {threads} 1>>{log}
 
     mmseqs createseqfiledb {params.DB} {params.DB_clu} {params.DB_clu_seq} \
-        --threads {threads} 1>>mmseqs2.log
+        --threads {threads} 1>>{log}
 
     mmseqs result2flat {params.DB} {params.DB} {params.DB_clu_seq} \
-        {params.DB_clu_fasta} 1>>mmseqs2.log
+        {params.DB_clu_fasta} 1>>{log}
 
-    mmseqs createsubdb {params.DB_clu} {params.DB} {params.DB_clu_rep} 1>>mmseqs2.log
+    mmseqs createsubdb {params.DB_clu} {params.DB} {params.DB_clu_rep} 1>>{log}
 
-    mmseqs convert2fasta {params.DB_clu_rep} {output.DB_clu_rep_fasta} 1>>mmseqs2.log
+    mmseqs convert2fasta {params.DB_clu_rep} {output.DB_clu_rep_fasta} 1>>{log}
 
     ## rename repseq to only use first dup sequence from bbtools_dedupe
     # flatten clu.tsv file so each row is one repseq and one seq
@@ -342,6 +356,7 @@ rule vs4dramv:
     envmodules: clust_conf["vs4dramv"]["modules"]
     input: rules.checkv_filter.output
     params: outdir = pjoin(SOUT, "vs2")
+    log: pjoin(SOUT, "vs2", "{sample}" + ".vs2.log")
     output: fasta = pjoin(SOUT, "vs2/for-dramv/final-viral-combined-for-dramv.fa"),
             tab = pjoin(SOUT, "vs2/for-dramv/viral-affi-contigs-for-dramv.tab")
     shell:"""
@@ -352,11 +367,11 @@ rule vs4dramv:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-    echo "Running all viral genomes from {wildcards.sample} through Virsorter2.0 to look for AMGs."
+    echo "Running all viral genomes from {wildcards.sample} through Virsorter2.0 to look for AMGs.  See log file {log}."
 
     virsorter run --seqname-suffix-off --viral-gene-enrich-off --provirus-off \
         --prep-for-dramv -i {input} -w {params.outdir} --include-groups dsDNAphage,ssDNA,NCLDV \
-        --min-length {config[vs_min_length]} --min-score 0.5 -j {threads} all 1>>vs2.log
+        --min-length {config[vs_min_length]} --min-score 0.5 -j {threads} all 1>>{log}
 
     echo "Virsorter2.0 finished for {wildcards.sample}."
 
@@ -368,6 +383,7 @@ rule amgs:
     input: fasta = rules.vs4dramv.output.fasta,
            tab = pjoin(SOUT, "vs2/for-dramv/viral-affi-contigs-for-dramv.tab")
     params: outdir = pjoin(SOUT, "amgs")
+    log: pjoin(SOUT, "amgs", "{sample}" + ".amgs.log")
     output: genes = pjoin(SOUT, "amgs/dramv-annotate/genes.faa"),
             gff = pjoin(SOUT, "amgs/dramv-annotate/genes.gff"),
             summary = pjoin(SOUT, "amgs/dramv-distill/amg_summary.tsv"),
@@ -382,15 +398,15 @@ rule amgs:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-   echo "Annotating all viral genomes from {wildcards.sample} with dramv to look for AMGs."
+   echo "Annotating all viral genomes from {wildcards.sample} with dramv to look for AMGs. See log file {log}."
     
         DRAM-v.py annotate -i {input.fasta} \
         -v {input.tab} \
         -o {params.outdir}/dramv-annotate --skip_trnascan \
-        --threads {threads} --min_contig_size {config[vs_min_length]}
+        --threads {threads} --min_contig_size {config[vs_min_length]} 1>>{log}
        
         DRAM-v.py distill -i {params.outdir}/dramv-annotate/annotations.tsv \
-        -o {params.outdir}/dramv-distill 1>>amgs.log
+        -o {params.outdir}/dramv-distill 1>>{log}
 
     echo "dramv for amgs from {wildcards.sample} finished."
 
@@ -403,7 +419,7 @@ rule verse_amgs:
             target = pjoin(IN, "{sample}" + config["assembly_suffix"]),
             reference = pjoin(SOUT, "amgs", "dramv-annotate", "scaffolds.fna"),
             bam = ancient(pjoin(IN, "{sample}" + config["bam_suffix"]))
-    log:    pjoin(SOUT, "verse_amgs", "liftoff.log")
+    log:    pjoin(SOUT, "verse_amgs", "{sample}" + ".liftoff.log")
     params: outdir = pjoin(SOUT, "verse_amgs"),
             intermdir = pjoin(SOUT, "verse_amgs", "intermediate_files"),
             prefix_genes = pjoin(SOUT, "verse_amgs", "{sample}_amgs.count"),
@@ -419,7 +435,7 @@ rule verse_amgs:
     rm -rf {params.outdir}
     mkdir -p {params.intermdir}
 
-    echo "Calculating AMG abundances." 
+    echo "Calculating AMG abundances.  For liftoff output and errors, see {log}." 
 
     # make chrom file
     grep -v -w "##gff-version" {input.gff} | grep -v -e "^#" | awk '{{ print $1 }}' | sort -u >{params.intermdir}/1.txt
@@ -441,7 +457,7 @@ rule verse_amgs:
 
     ## run verse
     verse -a {params.liftoff_gff} -o {params.prefix_genes} -g ID -z 1 -t gene \
-        -l -T 8 {input.bam} 1>>verse_amgs.log
+        -l -T 8 {input.bam} 1>>{log}
 
     ## calc cpms
     python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_genes} >{output.readcounts_genes}
@@ -456,6 +472,7 @@ rule dramv:
     envmodules: clust_conf["dramv"]["modules"]
     input: fasta = rules.checkv_filter.output
     params: outdir = pjoin(SOUT, "dramv")
+    log: pjoin(SOUT, "dramv", "{sample}" + ".dramv.log")
     output: genes = pjoin(SOUT, "dramv/dramv-annotate/genes.faa"),
             gff = pjoin(SOUT, "dramv/dramv-annotate/genes.gff"),
             scaffolds = pjoin(SOUT, "dramv/dramv-annotate/scaffolds.fna")
@@ -469,11 +486,11 @@ rule dramv:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-    echo "Running dramv on all viral sequences from geNomad in {wildcards.sample} for functional annotation." 
+    echo "Running dramv on all viral sequences from geNomad in {wildcards.sample} for functional annotation. See {log}." 
   
         DRAM-v.py annotate -i {input.fasta} \
         -o {params.outdir}/dramv-annotate --skip_trnascan \
-        --threads {threads} --min_contig_size {config[vs_min_length]} 1>>dramv.log
+        --threads {threads} --min_contig_size {config[vs_min_length]} 1>>{log}
 
     echo "dramv for functional annotation on viral genomes from geNomad in {wildcards.sample} finished." 
 
@@ -491,6 +508,7 @@ rule verse_dramv:
             prefix_genes = pjoin(SOUT, "verse_dramv", "{sample}_dramv.count"),
             counts_only_genes = pjoin(SOUT, "verse_dramv", "{sample}_dramv.count.gene.txt"),
             liftoff_gff = pjoin(SOUT, "verse_dramv", "{sample}.dramv_genes.liftoff.gff")
+    log: pjoin(SOUT, "verse_dramv", "{sample}" + ".liftoff.log")
     output: readcounts_genes = pjoin(SOUT, "verse_dramv", "{sample}_dramv.count.gene.cpm.txt")
     shell:"""
     ## lift gene features from trimmed contigs to original with liftoff and estimate gene abundances with verse
@@ -502,7 +520,7 @@ rule verse_dramv:
     rm -rf {params.outdir}
     mkdir -p {params.intermdir}
 
-   echo "Calculating genes abundances after functional annotation using dramv." 
+   echo "Calculating abundances of genes identified and annotated by DRAM-v using Liftoff and VERSE.  See log file for errors and output {log}." 
 
     # make chrom file
     grep -v -w "##gff-version" {input.gff} | grep -v -e "^#" | awk '{{ print $1 }}' >{params.intermdir}/1.txt
@@ -518,14 +536,14 @@ rule verse_dramv:
     ## redirect output to a log file otherwise it overwhelms the main log
     liftoff {input.target} {input.reference} -g {params.intermdir}/temp.gff -o {params.liftoff_gff} \
           -u {params.outdir}/unmapped_features.txt -dir {params.intermdir} -p 1 \
-          -chroms {params.intermdir}/chroms.txt -exclude_partial -a 0.9 2>{params.outdir}/liftoff.log \
-          1>>{params.outdir}/liftoff.log
+          -chroms {params.intermdir}/chroms.txt -exclude_partial -a 0.9 2>{log} \
+          1>>{log}
 
     ## remove double quotes
     sed 's/\"//g' {params.liftoff_gff} >{params.outdir}/temp.liftoff.gff && mv {params.outdir}/temp.liftoff.gff {params.liftoff_gff}
 
     ## get reads counts
-    verse -a {params.liftoff_gff} -o {params.prefix_genes} -g ID -z 1 -t gene -l -T {threads} {input.bam} 1>>verse_dramv.log
+    verse -a {params.liftoff_gff} -o {params.prefix_genes} -g ID -z 1 -t gene -l -T {threads} {input.bam} 1>>{log}
 
     python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_genes} >{output.readcounts_genes}
     rm {params.counts_only_genes}
@@ -647,6 +665,7 @@ rule diamond:
     envmodules: clust_conf["diamond"]["modules"]
     input: rules.genomad.output.proteins
     output: pjoin(SOUT, "diamond", "{sample}." + DIAMOND_DB_NAME + '.tsv') if DIAMOND_DB_NAME else "temp.txt"
+    log: pjoin(SOUT, "diamond", "{sample}" + ".diamond.log")
     params: outdir = pjoin(SOUT, "diamond"),
             s = "{sample}",
             tempdir = pjoin(clust_conf["diamond"]["tmpdir"], "{sample}_virome_diamond"),
@@ -664,13 +683,13 @@ rule diamond:
     mkdir -p {params.tempdir}
     trap 'rm -rvf {params.tempdir}' EXIT
 
-    echo "Annotating genes from geNomad for {wildcards.sample} against the nr database using diamond." 
+    echo "Annotating genes from geNomad for {wildcards.sample} against the nr database using diamond. See log file {log}." 
 
     diamond blastp --threads {threads} --max-target-seqs 2 -b 13 --tmpdir {params.tempdir} \
             --query {input} --db {config[diamonddb]} \
-            --daa {params.outdir}/{params.s}.{params.dbname}.daa 1>>diamond.log
+            --daa {params.outdir}/{params.s}.{params.dbname}.daa 1>>{log}
 
-    diamond view --threads {threads} --outfmt 6 qseqid pident qcovhsp scovhsp length mismatch gapopen qstart qend sstart send evalue bitscore stitle -a {params.outdir}/{params.s}.{params.dbname}.daa -o {output} 1>>diamond.log
+    diamond view --threads {threads} --outfmt 6 qseqid pident qcovhsp scovhsp length mismatch gapopen qstart qend sstart send evalue bitscore stitle -a {params.outdir}/{params.s}.{params.dbname}.daa -o {output} 1>>{log}
 
     ## add header to file
     sed -i '1s;^;qseqid\\tpident\\tqcovhsp\\tscovhsp\\tlength\\tmismatch\\tgapopen\\tqstart\\tqend\\tsstart\\tsend\\tevalue\\tbitscore\\tstitle\\n;' {output}
