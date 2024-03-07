@@ -313,7 +313,7 @@ rule votu:
     params: outdir = pjoin(OUT, "votu"),
             filelist = pjoin(OUT, "votu", "abundfiles.txt"),
             summlist = pjoin(OUT, "votu", "summaryfiles.txt")
-    output: votu = pjoin(OUT, "votu", "vOTU_table.tsv"),
+    output: votu = pjoin(OUT, "votu", "vOTU_table_cpm.tsv"),
             gmdanno = pjoin(OUT, "votu", "repseq_genomad_virus_summary.tsv")
     shell:"""
 
@@ -331,7 +331,7 @@ rule votu:
     echo "{input.abund}" >{params.filelist}
     tr " " "\\n" <{params.filelist} >{params.outdir}/temp && mv {params.outdir}/temp {params.filelist}
   
-  python3 {config[scriptdir]}/scripts/make_votu_table.py {input.mmseqs} {params.filelist} >{output.votu}
+  python3 {config[scriptdir]}/scripts/make_votu_table.py -v cpm {input.mmseqs} {params.filelist} >{output.votu}
 
     ## collate genomad annotations
     echo "{input.summ}" | tr " " "\\n" >{params.summlist}
@@ -563,6 +563,7 @@ rule gene_tables:
             amg_heatmap = pjoin(OUT, "gene_tables", "dramv_amg_heatmap_cpm.pdf")
     output: pfam = pjoin(OUT, "gene_tables", "dramv_pfam_hits_cpm.tsv"),
             vogdb = pjoin(OUT, "gene_tables", "dramv_vogdb_hits_cpm.tsv"),
+            kofam = pjoin(OUT, "gene_tables", "dramv_kofam_hits_cpm.tsv")
     shell:"""
     ## make abundance tables for dramv and diamond genes over all samples
 
@@ -580,8 +581,9 @@ rule gene_tables:
 
     python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c pfam_hits >{output.pfam}
     python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c vogdb_id -c vogdb_hits >{output.vogdb}
+    python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c ko_id -c kegg_hit >{output.kofam}
 
-    rm {params.samplelist}
+    ## rm {params.samplelist}
 
     """
 
