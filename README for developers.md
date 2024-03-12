@@ -1,9 +1,3 @@
----
-editor_options: 
-  markdown: 
-    wrap: 72
----
-
 # DiscoVir
 
 ## Files for running pipeline on LOCUS
@@ -58,7 +52,7 @@ editor_options:
 
 -   Python/3.9.5-GCCcore-10.3.0
 
-### rule vOTU
+#### rule vOTU
 
 -   Python/3.9.5-GCCcore-10.3.0
 
