@@ -97,22 +97,22 @@ rule genomad:
 
     """
 
-rule verse_genomad:
-    threads: clust_conf["verse"]["threads"]
-    envmodules: *clust_conf["verse"]["modules"]
+rule abund_genomad:
+    threads: clust_conf["abund_genomad"]["threads"]
+    envmodules: *clust_conf["abund_genomad"]["modules"]
     input:  genes = rules.genomad.output.genes,
             fna = rules.genomad.output.fna,
             virus = rules.genomad.output.summary,
             headermap = rules.genomad.output.assembly_headermap,
-            bam = ancient(pjoin(IN, "{sample}" + config["bam_suffix"]))
-    params: outdir = pjoin(SOUT, "verse_genomad"),
-            prefix_genes = pjoin(SOUT, "verse_genomad", "{sample}_virus_genes.count"),
-            counts_only_genes = pjoin(SOUT, "verse_genomad", "{sample}_virus_genes.count.CDS.txt"),
-            prefix_virus = pjoin(SOUT, "verse_genomad", "{sample}_virus.count"),
-            counts_only_virus = pjoin(SOUT, "verse_genomad", "{sample}_virus.count.CDS.txt")
-    log:    pjoin(SOUT, "verse_genomad", "{sample}" + ".verse_genomad.log")
-    output: readcounts_genes = pjoin(SOUT, "verse_genomad", "{sample}_virus_genes.count.CDS.cpm.txt"),
-            readcounts_virus = pjoin(SOUT, "verse_genomad", "{sample}_virus.count.CDS.cpm.txt")
+            bam = ancient(pjoin(IN, "{ample}" + config["bam_suffix"]))
+    params: outdir = pjoin(SOUT, "genomad", "abund_genomad"),
+            prefix_genes = pjoin(SOUT, "genomad", "abund_genomad", "{sample}_virus_genes.count"),
+            counts_only_genes = pjoin(SOUT, "genomad", "abund_genomad", "{sample}_virus_genes.count.CDS.txt"),
+            prefix_virus = pjoin(SOUT, "genomad", "abund_genomad", "{sample}_virus.count"),
+            counts_only_virus = pjoin(SOUT, "genomad", "abund_genomad", "{sample}_virus.count.CDS.txt")
+    log:    pjoin(SOUT, "genomad", "abund_genomad", "{sample}" + ".abund_genomad.log")
+    output: readcounts_genes = pjoin(SOUT, "genomad", "abund_genomad", "{sample}_virus_genes.count.CDS.cpm.txt"),
+            readcounts_virus = pjoin(SOUT, "genomad", "abund_genomad", "{sample}_virus.count.CDS.cpm.txt")
     shell:"""
     ## cleanup possible previous run
     rm -rf {params.outdir}
@@ -308,7 +308,7 @@ rule votu:
     threads: clust_conf["votu"]["threads"]
     envmodules: *clust_conf["votu"]["modules"]
     input: mmseqs = rules.mmseqs.output.flat_DB_clu_tsv,
-           abund = expand(rules.verse_genomad.output.readcounts_virus, sample=SAMPLES),
+           abund = expand(rules.abund_genomad.output.readcounts_virus, sample=SAMPLES),
            summ = expand(rules.genomad.output.summary, sample=SAMPLES)
     params: outdir = pjoin(OUT, "votu"),
             filelist = pjoin(OUT, "votu", "abundfiles.txt"),
@@ -709,7 +709,7 @@ rule diamond:
 rule all:
     input: GENOMADALL = expand(rules.genomad.output.fna, sample=SAMPLES),
            CHECKVALL = expand(rules.checkv_filter.output, sample=SAMPLES),
-           VERSEGALL = expand(rules.verse_genomad.output.readcounts_virus, sample=SAMPLES),
+           VERSEGALL = expand(rules.abund_genomad.output.readcounts_virus, sample=SAMPLES),
            BBTOOLS_DEDUPEALL = rules.bbtools_dedupe.output.unique_seqs,
 	   MMSEQSALL = rules.mmseqs.output.DB_clu_rep_fasta,
            VOTUALL = rules.votu.output.votu,

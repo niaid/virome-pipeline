@@ -10,7 +10,7 @@ __default__:
 genomad:
   modules: genomad/1.5.2
 
-verse:
+abund_genomad:
   threads: 8
   modules:
     - verse/0.1.5
