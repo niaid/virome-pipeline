@@ -104,7 +104,7 @@ rule abund_genomad:
             fna = rules.genomad.output.fna,
             virus = rules.genomad.output.summary,
             headermap = rules.genomad.output.assembly_headermap,
-            bam = ancient(pjoin(IN, "{ample}" + config["bam_suffix"]))
+            bam = ancient(pjoin(IN, "{sample}" + config["bam_suffix"]))
     params: outdir = pjoin(SOUT, "genomad", "abund_genomad"),
             prefix_genes = pjoin(SOUT, "genomad", "abund_genomad", "{sample}_virus_genes.count"),
             counts_only_genes = pjoin(SOUT, "genomad", "abund_genomad", "{sample}_virus_genes.count.CDS.txt"),
