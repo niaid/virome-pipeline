@@ -160,9 +160,9 @@ rule checkv:
     checkv | head -n1
     checkv | head -n1 >>{log}
 
-    echo "Checking quality and completeness of viral genomes in {wildcards.sample} with checkV.  See log file {log}."
+    echo "Checking quality and completeness of viral genomes in {wildcards.sample} with checkV.  See log file for output and any errors {log}."
 
-    checkv end_to_end {input} {params.outdir} -d {config[checkvdb]} -t {threads} 1>>{log}
+    checkv end_to_end {input} {params.outdir} -d {config[checkvdb]} -t {threads} --quiet 1>>{log}
 
     cat {params.outdir}/proviruses.fna {params.outdir}/viruses.fna >{output.fna}
 
@@ -371,7 +371,7 @@ rule vs4dramv:
 
     virsorter run --seqname-suffix-off --viral-gene-enrich-off --provirus-off \
         --prep-for-dramv -i {input} -w {params.outdir} --include-groups dsDNAphage,ssDNA,NCLDV \
-        --min-length {config[vs_min_length]} --min-score 0.5 -j {threads} all 1>>{log}
+        --min-length {config[vs_min_length]} --min-score 0.5 -j {threads} all 1>>{log} 2>>{log}
 
     echo "Virsorter2.0 finished for {wildcards.sample}."
 
@@ -406,7 +406,7 @@ rule amgs:
         --threads {threads} --min_contig_size {config[vs_min_length]} 1>>{log}
        
         DRAM-v.py distill -i {params.outdir}/dramv-annotate/annotations.tsv \
-        -o {params.outdir}/dramv-distill 1>>{log}
+        -o {params.outdir}/dramv-distill --log_file_path {log} 1>>{log}
 
     echo "dramv for amgs from {wildcards.sample} finished."
 
@@ -631,7 +631,7 @@ rule iphop:
     input: fasta = rules.mmseqs.output.renamed_DB_clu_rep_fasta
     params: outdir = pjoin(OUT, "iphop")
     log: pjoin(OUT, "iphop", "iphop.log")
-    output: genes = pjoin(OUT, "iphop", "Host_prediction_to_genome_m90.csv")
+    output: pjoin(OUT, "iphop", "Host_prediction_to_genome_m90.csv")
 
     shell:"""
     ## iphop for bacteriophage host calls
@@ -642,10 +642,10 @@ rule iphop:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-    echo "Predicting viral hosts with iPHoP. This step may take a while." 
+    echo "Predicting viral hosts with iPHoP. This step may take a while. See log {log}." 
 
     iphop predict --fa_file {input.fasta} --db_dir {config[iphopdb]} \
-	--out_dir {params.outdir} -t {threads} 1>>{log}
+	--out_dir {params.outdir} -t {threads} 1>>{log} 2>>{log}
 
     ## remove working dir
     rm -rf {params.outdir}/Wdir
@@ -667,7 +667,7 @@ rule diamond:
     threads: clust_conf["diamond"]["threads"]
     envmodules: clust_conf["diamond"]["modules"]
     input: rules.genomad.output.proteins
-    output: pjoin(SOUT, "diamond", "{sample}." + DIAMOND_DB_NAME + '.tsv') if DIAMOND_DB_NAME else "temp.txt"
+    output: pjoin(SOUT, "diamond", "{sample}." + DIAMOND_DB_NAME + '.tsv') if config["run_diamond"] else "{sample}.temp.txt"
     log: pjoin(SOUT, "diamond", "{sample}" + ".diamond.log")
     params: outdir = pjoin(SOUT, "diamond"),
             s = "{sample}",
@@ -690,9 +690,9 @@ rule diamond:
 
     diamond blastp --threads {threads} --max-target-seqs 2 -b 13 --tmpdir {params.tempdir} \
             --query {input} --db {config[diamonddb]} \
-            --daa {params.outdir}/{params.s}.{params.dbname}.daa 1>>{log}
+            --daa {params.outdir}/{params.s}.{params.dbname}.daa 1>>{log} 2>>{log}
 
-    diamond view --threads {threads} --outfmt 6 qseqid pident qcovhsp scovhsp length mismatch gapopen qstart qend sstart send evalue bitscore stitle -a {params.outdir}/{params.s}.{params.dbname}.daa -o {output} 1>>{log}
+    diamond view --threads {threads} --outfmt 6 qseqid pident qcovhsp scovhsp length mismatch gapopen qstart qend sstart send evalue bitscore stitle -a {params.outdir}/{params.s}.{params.dbname}.daa -o {output} 1>>{log} 2>>{log}
 
     ## add header to file
     sed -i '1s;^;qseqid\\tpident\\tqcovhsp\\tscovhsp\\tlength\\tmismatch\\tgapopen\\tqstart\\tqend\\tsstart\\tsend\\tevalue\\tbitscore\\tstitle\\n;' {output}
