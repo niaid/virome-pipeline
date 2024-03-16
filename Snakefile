@@ -355,10 +355,10 @@ rule vs4dramv:
     threads: clust_conf["vs4dramv"]["threads"]
     envmodules: clust_conf["vs4dramv"]["modules"]
     input: rules.checkv_filter.output
-    params: outdir = pjoin(SOUT, "vs2")
-    log: pjoin(SOUT, "vs2", "{sample}" + ".vs2.log")
-    output: fasta = pjoin(SOUT, "vs2/for-dramv/final-viral-combined-for-dramv.fa"),
-            tab = pjoin(SOUT, "vs2/for-dramv/viral-affi-contigs-for-dramv.tab")
+    params: outdir = pjoin(SOUT, "amgs", "vs2")
+    log: pjoin(SOUT, "amgs/vs2", "{sample}" + ".vs2.log")
+    output: fasta = pjoin(SOUT, "amgs/vs2/for-dramv/final-viral-combined-for-dramv.fa"),
+            tab = pjoin(SOUT, "amgs/vs2/for-dramv/viral-affi-contigs-for-dramv.tab")
     shell:"""
     ## run virsorter to produce input for DRAM-v
     virsorter --version
@@ -371,7 +371,7 @@ rule vs4dramv:
 
     virsorter run --seqname-suffix-off --viral-gene-enrich-off --provirus-off \
         --prep-for-dramv -i {input} -w {params.outdir} --include-groups dsDNAphage,ssDNA,NCLDV \
-        --min-length {config[vs_min_length]} --min-score 0.5 -j {threads} all 1>>{log} 2>>{log}
+        --min-length {config[vs_min_length]} --min-score 0.5 --rm-tmpdir -j {threads} all 1>>{log} 2>>{log}
 
     echo "Virsorter2.0 finished for {wildcards.sample}."
 
@@ -381,9 +381,10 @@ rule amgs:
     threads: clust_conf["amgs"]["threads"]
     envmodules: clust_conf["amgs"]["modules"]
     input: fasta = rules.vs4dramv.output.fasta,
-           tab = pjoin(SOUT, "vs2/for-dramv/viral-affi-contigs-for-dramv.tab")
-    params: outdir = pjoin(SOUT, "amgs")
-    log: pjoin(SOUT, "amgs", "{sample}" + ".amgs.log")
+           tab = rules.vs4dramv.output.tab
+    params: annot_outdir = pjoin(SOUT, "amgs", "dramv-annotate"),
+            distill_outdir = pjoin(SOUT, "amgs", "dramv-distill")
+    log: pjoin(SOUT, "amgs", "{sample}" + ".dramv_amgs.log")
     output: genes = pjoin(SOUT, "amgs/dramv-annotate/genes.faa"),
             gff = pjoin(SOUT, "amgs/dramv-annotate/genes.gff"),
             summary = pjoin(SOUT, "amgs/dramv-distill/amg_summary.tsv"),
@@ -395,37 +396,38 @@ rule amgs:
     mmseqs -h | head -n 7
 
     ## cleanup possible previous failed run
-    rm -rf {params.outdir}
-    mkdir -p {params.outdir}
+    rm -rf {params.annot_outdir}
+    rm -rf {params.distill_outdir}
+    rm -f {log}
 
    echo "Annotating all viral genomes from {wildcards.sample} with dramv to look for AMGs. See log file {log}."
     
         DRAM-v.py annotate -i {input.fasta} \
         -v {input.tab} \
-        -o {params.outdir}/dramv-annotate --skip_trnascan \
+        -o {params.annot_outdir} --skip_trnascan \
         --threads {threads} --min_contig_size {config[vs_min_length]} 1>>{log}
        
-        DRAM-v.py distill -i {params.outdir}/dramv-annotate/annotations.tsv \
-        -o {params.outdir}/dramv-distill --log_file_path {log} 1>>{log}
+        DRAM-v.py distill -i {params.annot_outdir}/annotations.tsv \
+        -o {params.distill_outdir} --log_file_path {log} 1>>{log}
 
     echo "dramv for amgs from {wildcards.sample} finished."
 
     """
 
-rule verse_amgs:
-    threads: clust_conf["verse_amgs"]["threads"]
-    envmodules: *clust_conf["verse_amgs"]["modules"]
+rule abund_amgs:
+    threads: clust_conf["abund_amgs"]["threads"]
+    envmodules: *clust_conf["abund_amgs"]["modules"]
     input:  gff = rules.amgs.output.gff,
             target = pjoin(IN, "{sample}" + config["assembly_suffix"]),
             reference = pjoin(SOUT, "amgs", "dramv-annotate", "scaffolds.fna"),
             bam = ancient(pjoin(IN, "{sample}" + config["bam_suffix"]))
-    log:    pjoin(SOUT, "verse_amgs", "{sample}" + ".liftoff.log")
-    params: outdir = pjoin(SOUT, "verse_amgs"),
-            intermdir = pjoin(SOUT, "verse_amgs", "intermediate_files"),
-            prefix_genes = pjoin(SOUT, "verse_amgs", "{sample}_amgs.count"),
-            counts_only_genes = pjoin(SOUT, "verse_amgs", "{sample}_amgs.count.gene.txt"),
-            liftoff_gff = pjoin(SOUT, "verse_amgs", "{sample}.amgs_genes.liftoff.gff")
-    output: readcounts_genes = pjoin(SOUT, "verse_amgs", "{sample}_amgs.count.gene.cpm.txt")
+    log:    pjoin(SOUT, "amgs", "abund_amgs", "{sample}" + ".abund_amgs.log")
+    params: outdir = pjoin(SOUT, "amgs", "abund_amgs"),
+            intermdir = pjoin(SOUT, "amgs", "abund_amgs", "intermediate_files"),
+            prefix_genes = pjoin(SOUT, "amgs", "abund_amgs", "{sample}_amgs.count"),
+            counts_only_genes = pjoin(SOUT, "amgs", "abund_amgs", "{sample}_amgs.count.gene.txt"),
+            liftoff_gff = pjoin(SOUT, "amgs", "abund_amgs", "{sample}.amgs_genes.liftoff.gff")
+    output: readcounts_genes = pjoin(SOUT, "amgs", "abund_amgs", "{sample}_amgs.count.gene.cpm.txt")
     shell:"""
     ## lift gene features from trimmed virsorter2 contigs to original with liftoff and estimate AMG abundances with verse
     liftoff -V
@@ -496,20 +498,20 @@ rule dramv:
 
     """
 
-rule verse_dramv:
-    threads: clust_conf["verse_dramv"]["threads"]
-    envmodules: *clust_conf["verse_dramv"]["modules"]
+rule abund_dramv:
+    threads: clust_conf["abund_dramv"]["threads"]
+    envmodules: *clust_conf["abund_dramv"]["modules"]
     input:  gff = rules.dramv.output.gff,
             target = pjoin(IN, "{sample}" + config["assembly_suffix"]),
             reference =  rules.dramv.output.scaffolds,
             bam = ancient(pjoin(IN, "{sample}" + config["bam_suffix"]))
-    params: outdir = pjoin(SOUT, "verse_dramv"),
-            intermdir = pjoin(SOUT, "verse_dramv", "intermediate_files"),
-            prefix_genes = pjoin(SOUT, "verse_dramv", "{sample}_dramv.count"),
-            counts_only_genes = pjoin(SOUT, "verse_dramv", "{sample}_dramv.count.gene.txt"),
-            liftoff_gff = pjoin(SOUT, "verse_dramv", "{sample}.dramv_genes.liftoff.gff")
-    log: pjoin(SOUT, "verse_dramv", "{sample}" + ".liftoff.log")
-    output: readcounts_genes = pjoin(SOUT, "verse_dramv", "{sample}_dramv.count.gene.cpm.txt")
+    params: outdir = pjoin(SOUT, "dramv", "abund_dramv"),
+            intermdir = pjoin(SOUT, "dramv", "abund_dramv", "intermediate_files"),
+            prefix_genes = pjoin(SOUT, "dramv", "abund_dramv", "{sample}_dramv.count"),
+            counts_only_genes = pjoin(SOUT, "dramv", "abund_dramv", "{sample}_dramv.count.gene.txt"),
+            liftoff_gff = pjoin(SOUT, "dramv", "abund_dramv", "{sample}.dramv_genes.liftoff.gff")
+    log: pjoin(SOUT, "dramv", "abund_dramv", "{sample}" + ".abund_dramv.log")
+    output: readcounts_genes = pjoin(SOUT, "dramv", "abund_dramv", "{sample}_dramv.count.gene.cpm.txt")
     shell:"""
     ## lift gene features from trimmed contigs to original with liftoff and estimate gene abundances with verse
     liftoff -V
@@ -554,8 +556,8 @@ rule verse_dramv:
 rule gene_tables:
     threads: clust_conf["gene_tables"]["threads"]
     envmodules: clust_conf["gene_tables"]["modules"]
-    input: abund = expand(rules.verse_dramv.output.readcounts_genes, sample=SAMPLES),
-           amgs = expand(rules.verse_amgs.output.readcounts_genes, sample=SAMPLES)
+    input: abund = expand(rules.abund_dramv.output.readcounts_genes, sample=SAMPLES),
+           amgs = expand(rules.abund_amgs.output.readcounts_genes, sample=SAMPLES)
     params: outdir = pjoin(OUT, "gene_tables"),
             samp = SAMPLES,
             samplelist = pjoin(OUT, "gene_tables", "samplelist.txt"),
@@ -577,7 +579,7 @@ rule gene_tables:
 
     ## dramv-annotate abund tables
 
-    echo "Collating abundances of VOGIDs and pfams from dramv functional annotation." 
+    echo "Collating abundances of VOGIDs, pfams, and kofams from dramv functional annotation." 
 
     python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c pfam_hits >{output.pfam}
     python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c vogdb_id -c vogdb_hits >{output.vogdb}
@@ -591,7 +593,7 @@ rule gene_tables:
 rule amg_tables:
     threads: clust_conf["gene_tables"]["threads"]
     envmodules: clust_conf["gene_tables"]["modules"]
-    input: amgs = expand(rules.verse_amgs.output.readcounts_genes, sample=SAMPLES)
+    input: amgs = expand(rules.abund_amgs.output.readcounts_genes, sample=SAMPLES)
     params: outdir = pjoin(OUT, "gene_tables"),
             samp = SAMPLES,
             samplelist = pjoin(OUT, "gene_tables", "amg_samplelist.txt"),
@@ -617,7 +619,7 @@ echo "Collating abundances of AMGs."
 
     ## heatmap of amgs
     python3 {config[scriptdir]}/scripts/plotnine_heatmap.py {output.amgs} {params.amg_heatmap} \
-            -t "Heatmap of AMGs" -d "gene_description" -a "cpm" 
+           -t "Heatmap of AMGs" -d "gene_description" -a "cpm" 
 
     rm {params.samplelist}
 
@@ -714,7 +716,7 @@ rule all:
            IPHOPALL = rules.iphop.output if config["run_iphop"] else [],
            DIAMALL = expand(rules.diamond.output, sample=SAMPLES) if config["run_diamond"] else [],
            DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
-           VERSEDALL = expand(rules.verse_dramv.output.readcounts_genes, sample=SAMPLES),
+           VERSEDALL = expand(rules.abund_dramv.output.readcounts_genes, sample=SAMPLES),
            GENETABLESALL = rules.gene_tables.output.vogdb,
-           VERSEAMGSALL = expand(rules.verse_amgs.output, sample=SAMPLES) if config["run_amgs"] else [],
+           VERSEAMGSALL = expand(rules.abund_amgs.output, sample=SAMPLES) if config["run_amgs"] else [],
            AMGTABLESALL = rules.amg_tables.output.amgs if config["run_amgs"] else []
