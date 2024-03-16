@@ -63,7 +63,7 @@ dramv:
   h_vmem: 3G
   modules: /hpcdata/bcbb/shared/microbiome_share/modules/dram/1.4.6_ms
 
-verse_dramv:
+abund_dramv:
   threads: 8
   h_vmem: 8G
   modules:
@@ -85,7 +85,7 @@ amgs:
 
 # not sure why we needs this twice, but Locus didn't like re-using the
 # verse_dramv rule
-verse_amgs:
+abund_amgs:
   threads: 8
   h_vmem: 8G
   extra: '-l quick'
