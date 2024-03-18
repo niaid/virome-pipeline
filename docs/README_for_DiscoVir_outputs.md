@@ -1,17 +1,25 @@
 # README of DiscoVir Outputs
 
-Thanks for using [Nephele's](https://nephele.niaid.nih.gov) DiscoVir virome pipeline!  See our [pipeline details page](https://nephele.niaid.nih.gov/pipeline_details/discovir) for more information, and for additional questions and help, please email us at nephelesupport@nih.gov.
+Thanks for using [Nephele's](https://nephele.niaid.nih.gov) DiscoVir virome pipeline!  See our [pipeline details page](https://nephele.niaid.nih.gov/pipeline_details/discovir) for more information, and for additional questions and help, please email us at nephelesupport@nih.gov (include your jobID and log messages for help with errors).
+
+**Log file**
+
+- *logfile.txt:* main log file for the pipeline.  DiscoVir uses [Snakemake](https://snakemake.github.io) for the workflow, and logfile.txt has the Snakemake output for each step in the pipeline.  It will list any errors (look for "Error"), and direct you to the step's individual log file for more information.
+
+### Folders
 
 There are two main folder types in the output of the DiscoVir pipeline:
 
 - Sample folders: per-sample output
 - Combined folders: outputs of analysis on sequences combined from across the entire dataset & tables merged from the individual sample results.
 
-**Combined folders**
+Here we will highlight the final output of each pipeline step as well as other important files.  For a complete list of the outputs of each tool (including any intermediate files), please see the individual tool's documentation linked below.  
 
-**Sample folders**
+#### Combined folders
 
-Each sample has an individual folder which contains subfolders for each step in the pipeline that analyzes the individual sample's sequences.  Here we will highlight the final output of each step as well as other important files.  For a complete list of the outputs of each tool (including any intermediate files), please see the individual tool's documentation linked below.  
+#### Sample folders
+
+Each sample has an individual folder which contains subfolders for each step in the pipeline that analyzes the individual sample's sequences.  
 
 The subfolders inside the sample folder are:
 
@@ -54,5 +62,4 @@ The subfolders inside the sample folder are:
   - *abund_amgs/{sample}_amgs.count.gene.cpm.txt:* abundance estimates of genes
 
 - **diamond (optional):** output of annotating the geNomad-predicted genes by aligning sequences with diamond to NCBI's nr database.  
-
-  - *CA1.nr.diamond.tsv:* table of top alignments for gene sequences with NCBI nr accession number.  For full explanation of all columns see the [NCBI BLAST format table under *outfmt*](https://www.ncbi.nlm.nih.gov/books/NBK279684/#appendices.Options_for_the_commandline_a) (DIAMOND uses the BLAST output format).
+- *CA1.nr.diamond.tsv:* table of top alignments for gene sequences with NCBI nr accession number.  For full explanation of all columns see the [NCBI BLAST format table under *outfmt*](https://www.ncbi.nlm.nih.gov/books/NBK279684/#appendices.Options_for_the_commandline_a) (DIAMOND uses the BLAST output format).
