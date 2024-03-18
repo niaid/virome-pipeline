@@ -62,4 +62,4 @@ The subfolders inside the sample folder are:
   - *abund_amgs/{sample}_amgs.count.gene.cpm.txt:* abundance estimates of genes
 
 - **diamond (optional):** if the `run_diamond` option is chosen, this folder contains the output of annotating the geNomad-predicted genes by aligning sequences with diamond to NCBI's nr database.  
-  - *CA1.nr.diamond.tsv:* table of top alignments for gene sequences with NCBI nr accession number.  For full explanation of all columns see the [NCBI BLAST format table under *outfmt*](https://www.ncbi.nlm.nih.gov/books/NBK279684/#appendices.Options_for_the_commandline_a) (DIAMOND uses the BLAST output format).
+  - *{sample}.nr.diamond.tsv:* table of top alignments for gene sequences with NCBI nr accession number.  For full explanation of all columns see the [NCBI BLAST format table under *outfmt*](https://www.ncbi.nlm.nih.gov/books/NBK279684/#appendices.Options_for_the_commandline_a) (DIAMOND uses the BLAST output format).
