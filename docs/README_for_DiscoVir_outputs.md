@@ -1,5 +1,7 @@
 # README of DiscoVir Outputs
 
+Thanks for using [Nephele's](https://nephele.niaid.nih.gov) DiscoVir virome pipeline!  See our [pipeline details page](https://nephele.niaid.nih.gov/pipeline_details/discovir) for more information, and for additional questions and help, please email us at nephelesupport@nih.gov.
+
 There are two main folder types in the output of the DiscoVir pipeline:
 
 - Sample folders: per-sample output
@@ -49,6 +51,7 @@ The subfolders inside the sample folder are:
   - *dramv-annotate/:* directory of DRAM-v gene annotations - using all DRAM-v databases
   - *dramv-distill:* directory containing the output of DRAM-v's distill step which identifies AMGs
     - *dramv-distill/amg_summary.tsv:* table of potential AMGs 
+  - *abund_amgs/{sample}_amgs.count.gene.cpm.txt:* abundance estimates of genes
 
 - **diamond (optional):** output of annotating the geNomad-predicted genes by aligning sequences with diamond to NCBI's nr database.  
 
