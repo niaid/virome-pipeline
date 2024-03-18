@@ -18,6 +18,7 @@ The pipeline first searchs for viral genomes using Genomad<sup>2</sup>, which al
 - [_locus.cluster_config.yaml_](locus.cluster_config.yaml): cluster configuration file for snakemake `--cluster-config` option. specifically for NIAID Locus HPC which uses UGE. (sets parameters for `qsub` command for each rule's job, and which environment modules to use)
 - [_locus_submit_vp.sh_](locus_submit_vp.sh): batch job submit script for running the pipeline on Locus
 - *[scripts](scripts)*: see [scripts README](scripts/README.md)
+- *[docs/README_for_DiscoVir_outputs.md](docs/README_for_DiscoVir_outputs.md)*: explanation of outputs of the pipeline
 
 ## Running the Pipeline
 
