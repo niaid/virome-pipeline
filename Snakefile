@@ -184,7 +184,8 @@ rule checkv_filter:
            qsum = rules.checkv.output.qsum
     params: outdir = pjoin(SOUT, "checkv"),
             checkv_q = checkv_q_validate(config["checkv_q"]),
-            tempclist = pjoin(SOUT, "checkv", "tempclist.txt")
+            tempclist = pjoin(SOUT, "checkv", "tempclist.txt"),
+            quality = pjoin(SOUT, "checkv", "checkv_quality_genomad_viruses.fna")
     output: pjoin(SOUT, "checkv", "checkv_filtered_genomad_viruses.fna")
     shell:"""
     ## use checkv quality assessment to filter viral contigs for clustering
@@ -203,11 +204,15 @@ rule checkv_filter:
     fi
 
     if [ "{params.checkv_q}" != "all" ]; then
-        seqtk subseq {input.fna} {params.tempclist} > {params.outdir}/temp && mv {params.outdir}/temp {output}
+        seqtk subseq {input.fna} {params.tempclist} > {params.outdir}/temp && mv {params.outdir}/temp {params.quality}
+
         rm -fv {params.tempclist}
     else
-        cp {input.fna} {output}
+        cp {input.fna} {params.quality}
     fi
+    
+     seqtk seq -L {config[vs_min_length]} {params.quality} > {output}
+
 
     """
 
@@ -217,12 +222,12 @@ rule bbtools_dedupe:
     threads: clust_conf["bbtools_dedupe"]["threads"]
     envmodules: clust_conf["bbtools_dedupe"]["modules"]
     input: expand(rules.checkv_filter.output, sample=SAMPLES)
-    params: outdir = pjoin(OUT, "bbtools_dedupe"),
-            input_ctgs = pjoin(OUT, "bbtools_dedupe", "all_input_contigs.fasta"),
-	    log = pjoin(OUT, "bbtools_dedupe", "log.txt"),
-	    stats = pjoin(OUT, "bbtools_dedupe", "cluster_stats.txt")
-    log:  pjoin(OUT, "bbtools_dedupe", "bbtools_dedupe.log")
-    output: unique_seqs = pjoin(OUT, "bbtools_dedupe", "unique_seqs.fasta")
+    params: outdir = pjoin(OUT, "vOTUs", "vOTU_clustering", "bbtools_dedupe"),
+            input_ctgs = pjoin(OUT, "vOTUs", "vOTU_clustering", "bbtools_dedupe", "all_input_contigs.fasta"),
+	    log = pjoin(OUT, "vOTUs", "vOTU_clustering", "bbtools_dedupe", "log.txt"),
+	    stats = pjoin(OUT, "vOTUs", "vOTU_clustering", "bbtools_dedupe", "cluster_stats.txt")
+    log:  pjoin(OUT, "vOTUs","vOTU_clustering", "bbtools_dedupe", "bbtools_dedupe.log")
+    output: unique_seqs = pjoin(OUT, "vOTUs", "vOTU_clustering", "bbtools_dedupe", "unique_seqs.fasta")
     shell:"""
     ## run bbtools_dedupe on all contigs to remove duplicates
 
@@ -250,18 +255,19 @@ rule mmseqs:
     threads: clust_conf["mmseqs"]["threads"]
     envmodules: *clust_conf["mmseqs"]["modules"]
     input: rules.bbtools_dedupe.output.unique_seqs
-    params: outdir = pjoin(OUT, "mmseqs"),
-            DB_dir = pjoin(OUT, "mmseqs", "DB"),
-            DB = pjoin(OUT, "mmseqs", "DB/DB"),
-	    DB_clu = pjoin(OUT, "mmseqs", "DB/DB_clu"),
-	    DB_clu_seq = pjoin(OUT, "mmseqs", "DB/DB_clu_seq"),
-	    DB_clu_fasta = pjoin(OUT, "mmseqs", "cluster_seqs.fasta"),
-	    DB_clu_rep = pjoin(OUT, "mmseqs", "DB/DB_clu_rep")
-    log: pjoin(OUT, "mmseqs", "mmseqs2.log")
-    output: DB_clu_rep_fasta = pjoin(OUT, "mmseqs", "representative_seqs.fasta"),
-            DB_clu_tsv = pjoin(OUT, "mmseqs", "DB_clu.tsv"),
-            flat_DB_clu_tsv = pjoin(OUT, "mmseqs", "flat_DB_clu.tsv"),
-            renamed_DB_clu_rep_fasta = pjoin(OUT, "mmseqs", "representative_seqs.renamed.fasta")
+    params: outdir = pjoin(OUT, "vOTUs", "vOTU_clustering", "mmseqs"),
+            DB_dir = pjoin(OUT, "vOTUs", "vOTU_clustering", "mmseqs", "DB"),
+            DB = pjoin(OUT, "vOTUs", "vOTU_clustering", "mmseqs", "DB/DB"),
+	    DB_clu = pjoin(OUT, "vOTUs", "vOTU_clustering", "mmseqs", "DB/DB_clu"),
+	    DB_clu_seq = pjoin(OUT, "vOTUs", "vOTU_clustering", "mmseqs", "DB/DB_clu_seq"),
+	    DB_clu_fasta = pjoin(OUT, "vOTUs", "vOTU_clustering", "mmseqs", "cluster_seqs.fasta"),
+	    DB_clu_rep = pjoin(OUT, "vOTUs", "vOTU_clustering", "mmseqs", "DB/DB_clu_rep")
+    log: pjoin(OUT, "vOTUs", "vOTU_clustering", "mmseqs", "mmseqs2.log")
+    output: DB_clu_rep_fasta = pjoin(OUT, "vOTUs","vOTU_clustering", "mmseqs", "representative_seqs.fasta"),
+            DB_clu_tsv = pjoin(OUT, "vOTUs","vOTU_clustering", "mmseqs", "DB_clu.tsv"),
+            flat_DB_clu_tsv = pjoin(OUT, "vOTUs","vOTU_clustering", "mmseqs", "flat_DB_clu.tsv"),
+            renamed_DB_clu_rep_fasta = pjoin(OUT, "vOTUs","vOTU_clustering", "mmseqs", "representative_seqs.renamed.fasta"),
+            vOTU_fasta = pjoin(OUT, "vOTUs", "vOTU_sequences.fasta")
     shell:"""
     ## run mmseqs on all deduped genomes
 
@@ -299,6 +305,8 @@ rule mmseqs:
     # rename representative_seqs.fasta
     sed '/^>/ s!>[^>]*!!2g' {output.DB_clu_rep_fasta} >{output.renamed_DB_clu_rep_fasta}
 
+    cp {output.renamed_DB_clu_rep_fasta} {output.vOTU_fasta}
+
     echo "Generation of vOTUs finished."
 
 
@@ -310,21 +318,19 @@ rule votu:
     input: mmseqs = rules.mmseqs.output.flat_DB_clu_tsv,
            abund = expand(rules.abund_genomad.output.readcounts_virus, sample=SAMPLES),
            summ = expand(rules.genomad.output.summary, sample=SAMPLES)
-    params: outdir = pjoin(OUT, "votu"),
-            filelist = pjoin(OUT, "votu", "abundfiles.txt"),
-            summlist = pjoin(OUT, "votu", "summaryfiles.txt")
-    output: votu = pjoin(OUT, "votu", "vOTU_table_cpm.tsv"),
-            gmdanno = pjoin(OUT, "votu", "repseq_genomad_virus_summary.tsv")
+    params: outdir = pjoin(OUT, "vOTUs"),
+            filelist = pjoin(OUT, "vOTUs", "abundfiles.txt"),
+            summlist = pjoin(OUT, "vOTUs", "summaryfiles.txt")
+    output: votu = pjoin(OUT, "vOTUs", "vOTU_table_cpm.tsv"),
+            gmdanno = pjoin(OUT, "vOTUs", "vOTUs_genomad_virus_summary.tsv")
+
     shell:"""
 
     ## make vOTU table
     python3 --version
 
     ## cleanup possible previous failed run
-    rm -rf {params.outdir}
-    mkdir -p {params.outdir}
-
-    ## vOTU table
+    rm -f {output.votu} {output.gmdanno}
 
     echo "Creating vOTU abundance table." 
 
@@ -570,7 +576,7 @@ rule gene_tables:
     ## make abundance tables for dramv and diamond genes over all samples
 
     ## cleanup possible previous failed run
-    rm -f {output.pfam} {output.vogdb}
+    rm -f {output.pfam} {output.vogdb} {output.kofam}
     mkdir -p {params.outdir}
 
     ## make input sample list for script
@@ -598,8 +604,8 @@ rule amg_tables:
             samp = SAMPLES,
             samplelist = pjoin(OUT, "gene_tables", "amg_samplelist.txt"),
             workingdir = OUT,
-            amg_heatmap = pjoin(OUT, "gene_tables", "dramv_amg_heatmap_cpm.pdf")
-    output: amgs = pjoin(OUT, "gene_tables", "dramv_amg_cpm.tsv")
+            amg_heatmap = pjoin(OUT, "gene_tables", "amg_heatmap_cpm.pdf")
+    output: amgs = pjoin(OUT, "gene_tables", "amg_cpm.tsv")
     shell:"""
 
     ## cleanup possible previous failed run
@@ -631,9 +637,9 @@ rule iphop:
     threads: clust_conf["iphop"]["threads"]
     envmodules: *clust_conf["iphop"]["modules"]
     input: fasta = rules.mmseqs.output.renamed_DB_clu_rep_fasta
-    params: outdir = pjoin(OUT, "iphop")
-    log: pjoin(OUT, "iphop", "iphop.log")
-    output: pjoin(OUT, "iphop", "Host_prediction_to_genome_m90.csv")
+    params: outdir = pjoin(OUT, "vOTU_Host_prediction_iphop")
+    log: pjoin(OUT, "vOTU_Host_prediction_iphop", "iphop.log")
+    output: pjoin(OUT, "vOTU_Host_prediction_iphop", "Host_prediction_to_genus_m90.csv")
 
     shell:"""
     ## iphop for bacteriophage host calls
@@ -646,7 +652,7 @@ rule iphop:
 
     echo "Predicting viral hosts with iPHoP. This step may take a while. See log {log}." 
 
-    iphop predict --fa_file {input.fasta} --db_dir {config[iphopdb]} \
+    iphop predict --fa_file {input.fasta} --db_dir {config[iphopdb]} --min_score {config[iphop_min_score]} \
 	--out_dir {params.outdir} -t {threads} 1>>{log} 2>>{log}
 
     ## remove working dir

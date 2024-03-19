@@ -26,7 +26,7 @@ checkv_q: all
 
 
 # min contig length for dramv and vOTU clustering
-vs_min_length: 1000
+vs_min_length: 5000
 
 ## amgs
 # run virsorter2 to filter contigs (this removes a lot)
@@ -39,6 +39,9 @@ run_amgs: yes
 # yes significantly increases run time and requires a lot
 # of memory
 run_iphop: no
+# Choose min confidence score. Value between 75 and 100. Default is 90. 
+iphop_min_score: 90
+# location of iphop database
 iphopdb: /hpcdata/bio_data/iphop/Sept_2021_pub_rw/
 
 # diamond db to annotate genes for eventual pathway inference - we use nr

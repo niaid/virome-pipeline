@@ -15,7 +15,7 @@ default_column = 'pfam_hits'
 parser.add_argument("pipelinedir", help="directory containing pipeline outputs - including sample directories")
 parser.add_argument("samplelist", help="file containing list of samples - should be names of sample directories that you want to include in the summary table - one per line")
 parser.add_argument("-d", "--dramv", help="which dramv directory do you want to use the annotations from. e.g. dramv or amgs (default: %(default)s)", default="amgs")
-parser.add_argument("-r", "--verse", help="which verse directory do you want to use the abundances from.  (default: %(default)s)", default="verse_amgs")
+parser.add_argument("-r", "--verse", help="which verse directory do you want to use the abundances from.  (default: %(default)s)", default="amgs/abund_amgs")
 parser.add_argument("-v", "--value", help="what value from abundance file to fill in the table (default: %(default)s)", choices = ['count', 'cpm', 'rpk'], default = 'count')
 parser.add_argument("-s", "--suffix", help="suffix for file with abundances (default: %(default)s)", default = "_amgs.count.gene.cpm.txt")
 args = parser.parse_args()

@@ -57,7 +57,7 @@ with open(args.samplelist, 'r') as f:
     samples = f.read().splitlines()
 
 ## make list of sample files and dramv annotation files
-abundlist = {sample: os.path.join(args.pipelinedir, sample, "verse_dramv", sample + args.suffix) for sample in samples}
+abundlist = {sample: os.path.join(args.pipelinedir, sample, "dramv/abund_dramv", sample + args.suffix) for sample in samples}
 annolist = {sample: os.path.join(args.pipelinedir, sample, args.dramv, "dramv-annotate", "annotations.tsv") for sample in samples}
 
 annotabs = {sample: read_annotate(annolist[sample], args.column, sample) for sample in samples}
