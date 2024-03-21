@@ -5,6 +5,8 @@ __default__:
     tmpdir: "$TMP"
     log: '{wildcards.sample}/logs'
     jobname: '{wildcards.sample}'
+    pythonpath: /hpcdata/bcbb/shared/microbiome_share/software/python3.9.5-GCCcore-10.3.0
+## pythonpath has biom and plotnine libs installed
 
 
 genomad:

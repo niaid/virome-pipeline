@@ -1,8 +1,8 @@
-# README of DiscoVir Outputs
+# README for DiscoVir Outputs
 
 Thanks for using [Nephele's](https://nephele.niaid.nih.gov) DiscoVir virome pipeline! See our [pipeline details page](https://nephele.niaid.nih.gov/pipeline_details/discovir) for more information, and for additional questions and help, please email us at nephelesupport@nih.gov (include your jobID and log messages for help with errors).
 
-**Log file**
+### Log file
 
 -   *logfile.txt:* main log file for the pipeline. DiscoVir uses [Snakemake](https://snakemake.github.io) for the workflow, and logfile.txt has the Snakemake output for each step in the pipeline. It will list any errors (look for "Error"), and direct you to the step's individual log file for more information.
 
@@ -73,6 +73,7 @@ The subfolders inside the sample folder are:
     -   *vOTU_table_cpm.tsv*: Matrix of abundances (CPM) of vOTUs for each sample.
     -   *vOTU.krona.html*: Krona plots of vOTU taxonomy.
     -   *vOTU_genomad_virus_summary.tsv*: geNomad summary information for vOTUs.
+    -   *vOTU_cpm.biom:* biom file of vOTU abundances and taxonomy
     -   **vOTU_clustering**:
         -  **bbtools_dedupe**: outputs of deduplication step with BBTools [dedupe.sh](https://jgi.doe.gov/data-and-tools/software-tools/bbtools/bb-tools-user-guide/dedupe-guide/)
            -  *all_input_contigs.fasta*: FASTA file containing all viral genomes combined from all samples. 
@@ -96,6 +97,10 @@ The subfolders inside the sample folder are:
     -   *dramv_kofam_hits_cpm.tsv*: A matrix of abundances (CPM) of kofam hits from DRAM-v. 
     -   *dramv_pfam_hits_cpm.tsv*: A matrix of abundances (CPM) of Pfam hits from DRAM-v. 
     -   *dramv_vogdb_hits_cpm.tsv*: A matrix of abundances (CPM) of VOGID hits from DRAM-v. 
-    -   *dramv_heatmap.pdf*: Heatmap of abundances (CPM) of top VOGID hits from DRAM-v.
+    -   *dramv_vogdb_heatmap_cpm.pdf*: Heatmap of abundances (CPM) of top VOGID hits from DRAM-v.
     -   *amg_cpm.tsv*: If the AMG option is selected, this file will be produced containing a matrix of CPM abundances of AMGs for each sample. 
-    -   *amg_heatmap.pdf*: Heatmap of abundances (CPM) of AMGs. 
+    -   *amg_heatmap_cpm.pdf*: Heatmap of abundances (CPM) of AMGs. 
+
+### Pipeline diagram
+
+![discovir pipeline diagram](/Users/subramanianp4/nephele/discovir/discovir.drawio.svg "DiscoVir Pipeline diagram"){ height=auto }\

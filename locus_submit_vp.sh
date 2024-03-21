@@ -10,6 +10,9 @@
 
 module load snakemake || exit 1
 
+## protect us from user libs
+export PYTHONNOUSERSITE=True
+
 ## project config
 configfile=/path/to/project_config.yaml
 

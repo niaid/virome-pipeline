@@ -14,6 +14,8 @@ OUT = config["outdir"] ## directory storing all output
 SOUT = pjoin(OUT, "{sample}") ## subdirectory for each sample's output (including logs)
 LOGS = pjoin(OUT, "logs") ## log directory for logfiles of rules involving more than one sample
 IN = config["indir"] ## directory storing all assemblies/input
+VOTU_DIR = pjoin(OUT, "vOTUs")
+VOTU_CL_DIR = pjoin(VOTU_DIR, "vOTU_clustering") 
 
 
 ## inputs
@@ -162,7 +164,7 @@ rule checkv:
 
     echo "Checking quality and completeness of viral genomes in {wildcards.sample} with checkV.  See log file for output and any errors {log}."
 
-    checkv end_to_end {input} {params.outdir} -d {config[checkvdb]} -t {threads} --quiet 1>>{log}
+    checkv end_to_end {input} {params.outdir} -d {config[checkvdb]} -t {threads} --quiet 1>>{log} 2>>{log}
 
     cat {params.outdir}/proviruses.fna {params.outdir}/viruses.fna >{output.fna}
 
@@ -222,12 +224,12 @@ rule bbtools_dedupe:
     threads: clust_conf["bbtools_dedupe"]["threads"]
     envmodules: clust_conf["bbtools_dedupe"]["modules"]
     input: expand(rules.checkv_filter.output, sample=SAMPLES)
-    params: outdir = pjoin(OUT, "vOTUs", "vOTU_clustering", "bbtools_dedupe"),
-            input_ctgs = pjoin(OUT, "vOTUs", "vOTU_clustering", "bbtools_dedupe", "all_input_contigs.fasta"),
-	    log = pjoin(OUT, "vOTUs", "vOTU_clustering", "bbtools_dedupe", "log.txt"),
-	    stats = pjoin(OUT, "vOTUs", "vOTU_clustering", "bbtools_dedupe", "cluster_stats.txt")
-    log:  pjoin(OUT, "vOTUs","vOTU_clustering", "bbtools_dedupe", "bbtools_dedupe.log")
-    output: unique_seqs = pjoin(OUT, "vOTUs", "vOTU_clustering", "bbtools_dedupe", "unique_seqs.fasta")
+    params: outdir = pjoin(VOTU_CL_DIR, "bbtools_dedupe"),
+            input_ctgs = pjoin(VOTU_CL_DIR, "bbtools_dedupe", "all_input_contigs.fasta"),
+	    log = pjoin(VOTU_CL_DIR, "bbtools_dedupe", "log.txt"),
+	    stats = pjoin(VOTU_CL_DIR, "bbtools_dedupe", "cluster_stats.txt")
+    log:  pjoin(VOTU_CL_DIR, "bbtools_dedupe", "bbtools_dedupe.log")
+    output: unique_seqs = pjoin(VOTU_CL_DIR, "bbtools_dedupe", "unique_seqs.fasta")
     shell:"""
     ## run bbtools_dedupe on all contigs to remove duplicates
 
@@ -255,19 +257,19 @@ rule mmseqs:
     threads: clust_conf["mmseqs"]["threads"]
     envmodules: *clust_conf["mmseqs"]["modules"]
     input: rules.bbtools_dedupe.output.unique_seqs
-    params: outdir = pjoin(OUT, "vOTUs", "vOTU_clustering", "mmseqs"),
-            DB_dir = pjoin(OUT, "vOTUs", "vOTU_clustering", "mmseqs", "DB"),
-            DB = pjoin(OUT, "vOTUs", "vOTU_clustering", "mmseqs", "DB/DB"),
-	    DB_clu = pjoin(OUT, "vOTUs", "vOTU_clustering", "mmseqs", "DB/DB_clu"),
-	    DB_clu_seq = pjoin(OUT, "vOTUs", "vOTU_clustering", "mmseqs", "DB/DB_clu_seq"),
-	    DB_clu_fasta = pjoin(OUT, "vOTUs", "vOTU_clustering", "mmseqs", "cluster_seqs.fasta"),
-	    DB_clu_rep = pjoin(OUT, "vOTUs", "vOTU_clustering", "mmseqs", "DB/DB_clu_rep")
-    log: pjoin(OUT, "vOTUs", "vOTU_clustering", "mmseqs", "mmseqs2.log")
-    output: DB_clu_rep_fasta = pjoin(OUT, "vOTUs","vOTU_clustering", "mmseqs", "representative_seqs.fasta"),
-            DB_clu_tsv = pjoin(OUT, "vOTUs","vOTU_clustering", "mmseqs", "DB_clu.tsv"),
-            flat_DB_clu_tsv = pjoin(OUT, "vOTUs","vOTU_clustering", "mmseqs", "flat_DB_clu.tsv"),
-            renamed_DB_clu_rep_fasta = pjoin(OUT, "vOTUs","vOTU_clustering", "mmseqs", "representative_seqs.renamed.fasta"),
-            vOTU_fasta = pjoin(OUT, "vOTUs", "vOTU_sequences.fasta")
+    params: outdir = pjoin(VOTU_CL_DIR, "mmseqs"),
+            DB_dir = pjoin(VOTU_CL_DIR, "mmseqs", "DB"),
+            DB = pjoin(VOTU_CL_DIR, "mmseqs", "DB/DB"),
+	    DB_clu = pjoin(VOTU_CL_DIR, "mmseqs", "DB/DB_clu"),
+	    DB_clu_seq = pjoin(VOTU_CL_DIR, "mmseqs", "DB/DB_clu_seq"),
+	    DB_clu_fasta = pjoin(VOTU_CL_DIR, "mmseqs", "cluster_seqs.fasta"),
+	    DB_clu_rep = pjoin(VOTU_CL_DIR, "mmseqs", "DB/DB_clu_rep")
+    log: pjoin(VOTU_CL_DIR, "mmseqs", "mmseqs2.log")
+    output: DB_clu_rep_fasta = pjoin(VOTU_CL_DIR, "mmseqs", "representative_seqs.fasta"),
+            DB_clu_tsv = pjoin(VOTU_CL_DIR, "mmseqs", "DB_clu.tsv"),
+            flat_DB_clu_tsv = pjoin(VOTU_CL_DIR, "mmseqs", "flat_DB_clu.tsv"),
+            renamed_DB_clu_rep_fasta = pjoin(VOTU_CL_DIR, "mmseqs", "representative_seqs.renamed.fasta"),
+            vOTU_fasta = pjoin(VOTU_DIR, "vOTU_sequences.fasta")
     shell:"""
     ## run mmseqs on all deduped genomes
 
@@ -318,11 +320,16 @@ rule votu:
     input: mmseqs = rules.mmseqs.output.flat_DB_clu_tsv,
            abund = expand(rules.abund_genomad.output.readcounts_virus, sample=SAMPLES),
            summ = expand(rules.genomad.output.summary, sample=SAMPLES)
-    params: outdir = pjoin(OUT, "vOTUs"),
-            filelist = pjoin(OUT, "vOTUs", "abundfiles.txt"),
-            summlist = pjoin(OUT, "vOTUs", "summaryfiles.txt")
-    output: votu = pjoin(OUT, "vOTUs", "vOTU_table_cpm.tsv"),
-            gmdanno = pjoin(OUT, "vOTUs", "vOTUs_genomad_virus_summary.tsv")
+    params: outdir = pjoin(VOTU_DIR),
+            filelist = pjoin(VOTU_DIR, "abundfiles.txt"),
+            summlist = pjoin(VOTU_DIR, "summaryfiles.txt"),
+            pythonpath = clust_conf["votu"]["pythonpath"],
+            mapping = config["mapping_file"],
+            obs_met = pjoin(VOTU_DIR, "obs_met.tsv"),
+            tempbiom = pjoin(VOTU_DIR, "temp.biom")
+    output: votu = pjoin(VOTU_DIR, "vOTU_table_cpm.tsv"),
+            gmdanno = pjoin(VOTU_DIR, "vOTUs_genomad_virus_summary.tsv"),
+            biom = pjoin(VOTU_DIR, "vOTU_cpm.biom")
 
     shell:"""
 
@@ -330,14 +337,14 @@ rule votu:
     python3 --version
 
     ## cleanup possible previous failed run
-    rm -f {output.votu} {output.gmdanno}
+    rm -f {output.votu} {output.gmdanno} {params.filelist} {params.summlist} {params.obs_met} {params.tempbiom}
 
     echo "Creating vOTU abundance table." 
 
     echo "{input.abund}" >{params.filelist}
     tr " " "\\n" <{params.filelist} >{params.outdir}/temp && mv {params.outdir}/temp {params.filelist}
   
-  python3 {config[scriptdir]}/scripts/make_votu_table.py -v cpm {input.mmseqs} {params.filelist} >{output.votu}
+    python3 {config[scriptdir]}/scripts/make_votu_table.py -v cpm {input.mmseqs} {params.filelist} >{output.votu}
 
     ## collate genomad annotations
     echo "{input.summ}" | tr " " "\\n" >{params.summlist}
@@ -349,10 +356,20 @@ rule votu:
     python3 {config[scriptdir]}/scripts/format_genomad_and_votu_for_krona.py {output.votu} {output.gmdanno} {params.outdir}/temp1
     ktImportText -o {params.outdir}/vOTU.krona.html {params.outdir}/temp1/*.txt
 
+    ## make biom file
+    sed '0,/seq_name/{{s/seq_name/\#repseq/}}' {output.gmdanno} | awk -F $'\t' '{{ print $1"\t"$11 }}' >{params.obs_met}
+    export PYTHONPATH={params.pythonpath}
+    {params.pythonpath}/bin/biom convert -i {output.votu} -o {params.tempbiom} --to-json --table-type "OTU table"
+    {params.pythonpath}/bin/biom add-metadata -i {params.tempbiom} -o {output.biom} \
+         --observation-metadata-fp {params.obs_met} --sc-separated taxonomy --output-as-json
+    if [ "{params.mapping}" != "None" ]; then
+        {params.pythonpath}/bin/biom add-metadata -i {output.biom} -o {params.tempbiom} \
+         --sample-metadata-fp {params.mapping} --output-as-json
+    fi
+
   
     ## cleanup
-    rm -f {params.filelist}
-    rm -f {params.summlist}
+    rm -f {params.filelist} {params.summlist} {params.obs_met} {params.tempbiom}
     rm -rf {params.outdir}/temp1
 
     """
@@ -568,7 +585,9 @@ rule gene_tables:
             samp = SAMPLES,
             samplelist = pjoin(OUT, "gene_tables", "samplelist.txt"),
             workingdir = OUT,
-            amg_heatmap = pjoin(OUT, "gene_tables", "dramv_amg_heatmap_cpm.pdf")
+            top_vogids = pjoin(OUT, "gene_tables", "top_dramv_vogdb_hits_cpm.tsv"),
+            vogdb_heatmap = pjoin(OUT, "gene_tables", "dramv_vogdb_heatmap_cpm"),
+            pythonpath = clust_conf["gene_tables"]["pythonpath"]
     output: pfam = pjoin(OUT, "gene_tables", "dramv_pfam_hits_cpm.tsv"),
             vogdb = pjoin(OUT, "gene_tables", "dramv_vogdb_hits_cpm.tsv"),
             kofam = pjoin(OUT, "gene_tables", "dramv_kofam_hits_cpm.tsv")
@@ -588,8 +607,15 @@ rule gene_tables:
     echo "Collating abundances of VOGIDs, pfams, and kofams from dramv functional annotation." 
 
     python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c pfam_hits >{output.pfam}
-    python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c vogdb_id -c vogdb_hits >{output.vogdb}
     python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c ko_id -c kegg_hit >{output.kofam}
+    python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c vogdb_id -c vogdb_hits >{output.vogdb}
+
+    ## vogdb heatmap of top genes by prevalence and mean
+    python3 {config[scriptdir]}/scripts/top_genes.py {output.vogdb} -i "vogdb_hits" -m prev >{params.top_vogids}
+    export PYTHONPATH={params.pythonpath}
+    python3 {config[scriptdir]}/scripts/plotnine_heatmap.py {params.top_vogids} {params.vogdb_heatmap} \
+           -t "Heatmap of top VOG genes" -d "vogdb_hits" -a "cpm" 
+     
 
     ## rm {params.samplelist}
 
@@ -597,14 +623,15 @@ rule gene_tables:
 
 
 rule amg_tables:
-    threads: clust_conf["gene_tables"]["threads"]
-    envmodules: clust_conf["gene_tables"]["modules"]
+    threads: clust_conf["amg_tables"]["threads"]
+    envmodules: clust_conf["amg_tables"]["modules"]
     input: amgs = expand(rules.abund_amgs.output.readcounts_genes, sample=SAMPLES)
     params: outdir = pjoin(OUT, "gene_tables"),
             samp = SAMPLES,
             samplelist = pjoin(OUT, "gene_tables", "amg_samplelist.txt"),
             workingdir = OUT,
-            amg_heatmap = pjoin(OUT, "gene_tables", "amg_heatmap_cpm.pdf")
+            amg_heatmap = pjoin(OUT, "gene_tables", "amg_heatmap_cpm"),
+            pythonpath = clust_conf["amg_tables"]["pythonpath"]
     output: amgs = pjoin(OUT, "gene_tables", "amg_cpm.tsv")
     shell:"""
 
@@ -624,6 +651,7 @@ echo "Collating abundances of AMGs."
     python3 {config[scriptdir]}/scripts/dramv_amgs_table.py {params.workingdir} {params.samplelist} -v cpm >{output.amgs}
 
     ## heatmap of amgs
+    export PYTHONPATH={params.pythonpath}
     python3 {config[scriptdir]}/scripts/plotnine_heatmap.py {output.amgs} {params.amg_heatmap} \
            -t "Heatmap of AMGs" -d "gene_description" -a "cpm" 
 

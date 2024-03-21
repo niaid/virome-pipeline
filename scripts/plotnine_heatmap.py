@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Uses pandas and plotnine python libraries
+Uses pandas and plotnine v 0.12.4 python libraries
 https://plotnine.readthedocs.io/en/stable/index.html
 
 
@@ -35,20 +35,21 @@ from mizani.transforms import log1p_trans
 ## arguments
 parser = argparse.ArgumentParser(description="This script uses the python library plotnine to make a heatmap from a csv table.  The y-axis column should be the first one in the table after any columns are dropped.")
 parser.add_argument("inputfile", help="file with table from which to make heatmap")
-parser.add_argument("outputfile", help="filename of output pdf")
+parser.add_argument("outputprefix", help="file prefix of output file(s)")
 parser.add_argument("-a", "--abund", help="abundance value in table. used for labeling heatmap.  the default is generic. (default: %(default)s)", default="abund")
 parser.add_argument("-t", "--title", help="Title of heatmap; double quoted")
 parser.add_argument("-d", "--dropcols", help="Columns to drop/remove before plotting - separated by commas; double quoted")
+parser.add_argument("-f", "--plotfiletype", help="File type of output plot. (default: %(default)s)", choices=['pdf', 'png', 'both'], default='both')
 args = parser.parse_args()
 
-print(args)
+print(args, file=sys.stderr)
 
 ## Load the CSV file
 inputdf = pd.read_csv(args.inputfile, sep='\t', index_col=False)
 
 ## check if inputdf is empty
 if inputdf.size == 0:
-    print(f"WARNING: AMGs abundance file {args.inputfile} is empty. Heatmap will not be made.", file=sys.stderr)
+    print(f"WARNING: abundance file {args.inputfile} is empty. Heatmap will not be made.", file=sys.stderr)
     sys.exit(0)
 
 if (args.dropcols is not None):
@@ -60,8 +61,8 @@ y_axis = inputdf.columns[0]
 inputdf = inputdf.set_index(y_axis)
 
 ## dimensions of plot
-width = max(inputdf.shape[1] / 4, 5)
-height = max((inputdf.shape[0] / 6.25) + 0.5, 5)
+width = float(max(inputdf.shape[1] / 4, 5))
+height = float(max((inputdf.shape[0] / 6.25) + 0.5, 5))
 
 
 ## melt dataframe
@@ -77,4 +78,8 @@ if (args.title is not None):
 
 
 ## save to file
-ggp.save(filename=args.outputfile, limitsize=False)
+if (args.plotfiletype in ['pdf', 'both']):
+    ggp.save(filename=args.outputprefix + '.pdf', limitsize=False)
+
+if (args.plotfiletype in ['png', 'both']):
+    ggp.save(filename=args.outputprefix + '.png', limitsize=False)
