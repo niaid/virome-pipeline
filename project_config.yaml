@@ -59,6 +59,9 @@ assembly_suffix: .scaffolds.fasta
 # {indir}/{sample prefix}{bam_suffix}
 bam_suffix: .bam
 
+# optional tab separated mapping file - will be added to  biom file.
+mapping_file:
+
 # sample prefixes to be used throughout pipeline
 samples:
   Sample1
