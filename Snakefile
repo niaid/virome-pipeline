@@ -568,7 +568,8 @@ rule gene_tables:
             samp = SAMPLES,
             samplelist = pjoin(OUT, "gene_tables", "samplelist.txt"),
             workingdir = OUT,
-            amg_heatmap = pjoin(OUT, "gene_tables", "dramv_amg_heatmap_cpm.pdf")
+            top_vogids = pjoin(OUT, "gene_tables", "top_dramv_vogdb_hits_cpm.tsv"),
+            vogdb_heatmap = pjoin(OUT, "gene_tables", "dramv_vogdb_heatmap_cpm"),
     output: pfam = pjoin(OUT, "gene_tables", "dramv_pfam_hits_cpm.tsv"),
             vogdb = pjoin(OUT, "gene_tables", "dramv_vogdb_hits_cpm.tsv"),
             kofam = pjoin(OUT, "gene_tables", "dramv_kofam_hits_cpm.tsv")
@@ -588,8 +589,15 @@ rule gene_tables:
     echo "Collating abundances of VOGIDs, pfams, and kofams from dramv functional annotation." 
 
     python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c pfam_hits >{output.pfam}
-    python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c vogdb_id -c vogdb_hits >{output.vogdb}
     python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c ko_id -c kegg_hit >{output.kofam}
+    python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c vogdb_id -c vogdb_hits >{output.vogdb}
+
+    ## vogdb heatmap of top genes by prevalence and mean
+    python3 {config[scriptdir]}/scripts/top_genes.py {output.vogdb} -i "vogdb_hits" -m prev >{params.top_vogids}
+    export PYTHONPATH={params.pythonpath}
+    python3 {config[scriptdir]}/scripts/plotnine_heatmap.py {params.top_vogids} {params.vogdb_heatmap} \
+           -t "Heatmap of top VOG genes" -d "vogdb_hits" -a "cpm" 
+     
 
     ## rm {params.samplelist}
 
@@ -597,14 +605,15 @@ rule gene_tables:
 
 
 rule amg_tables:
-    threads: clust_conf["gene_tables"]["threads"]
-    envmodules: clust_conf["gene_tables"]["modules"]
+    threads: clust_conf["amg_tables"]["threads"]
+    envmodules: clust_conf["amg_tables"]["modules"]
     input: amgs = expand(rules.abund_amgs.output.readcounts_genes, sample=SAMPLES)
     params: outdir = pjoin(OUT, "gene_tables"),
             samp = SAMPLES,
             samplelist = pjoin(OUT, "gene_tables", "amg_samplelist.txt"),
             workingdir = OUT,
-            amg_heatmap = pjoin(OUT, "gene_tables", "amg_heatmap_cpm.pdf")
+            amg_heatmap = pjoin(OUT, "gene_tables", "amg_heatmap_cpm.pdf"),
+            pythonpath = clust_conf["amg_tables"]["pythonpath"]
     output: amgs = pjoin(OUT, "gene_tables", "amg_cpm.tsv")
     shell:"""
 
@@ -624,6 +633,7 @@ echo "Collating abundances of AMGs."
     python3 {config[scriptdir]}/scripts/dramv_amgs_table.py {params.workingdir} {params.samplelist} -v cpm >{output.amgs}
 
     ## heatmap of amgs
+    export PYTHONPATH={params.pythonpath}
     python3 {config[scriptdir]}/scripts/plotnine_heatmap.py {output.amgs} {params.amg_heatmap} \
            -t "Heatmap of AMGs" -d "gene_description" -a "cpm" 
 

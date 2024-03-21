@@ -81,7 +81,7 @@ options:
 
 ## [plotnine_heatmap.py](plotnine_heatmap.py)
 
-Uses the [plotnine](https://plotnine.readthedocs.io/en/stable/index.html) python library to make heatmap from csv table.
+Uses the [plotnine](https://plotnine.readthedocs.io/en/stable/index.html) python library **v0.12.4** (newer versions will NOT work) to make heatmap from csv table.
 
 ```bash
 usage: plotnine_heatmap.py [-h] [-a ABUND] [-t TITLE] [-d DROPCOLS] inputfile outputfile
@@ -100,5 +100,33 @@ optional arguments:
                         Title of heatmap; double quoted
   -d DROPCOLS, --dropcols DROPCOLS
                         Columns to drop/remove before plotting - separated by commas; double quoted
+```
+
+## [top_genes.py](top_genes.py)
+
+This script takes in a gene abundance table and prints to STDOUT a subset of the table
+with top genes by mean abundance or prevalence and mean abundance across samples.
+
+```bash
+usage: top_genes.py [-h] [-n NTOP] [-m {mean,prev,median}] [-c IDCOL] [-i IGNORE] [-d]
+                    genetab
+
+
+positional arguments:
+  genetab               input gene abundance table
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -n NTOP, --ntop NTOP  number of top genes to keep in output table. (default: 10)
+  -m {mean,prev,median}, --metric {mean,prev,median}
+                        how to choose top genes. by mean abundance across samples, by
+                        prevalence first and then mean, or by median. (default: mean)
+  -c IDCOL, --idcol IDCOL
+                        column name with gene id. default will use the first column
+  -i IGNORE, --ignore IGNORE
+                        other columns besides idcol to ignore when choosing top genes.
+                        they will still be included in the output. column names should be
+                        separated by commas; double quoted
+  -d, --debug           print debug messages
 ```
 
