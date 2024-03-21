@@ -570,6 +570,7 @@ rule gene_tables:
             workingdir = OUT,
             top_vogids = pjoin(OUT, "gene_tables", "top_dramv_vogdb_hits_cpm.tsv"),
             vogdb_heatmap = pjoin(OUT, "gene_tables", "dramv_vogdb_heatmap_cpm"),
+            pythonpath = clust_conf["amg_tables"]["pythonpath"]
     output: pfam = pjoin(OUT, "gene_tables", "dramv_pfam_hits_cpm.tsv"),
             vogdb = pjoin(OUT, "gene_tables", "dramv_vogdb_hits_cpm.tsv"),
             kofam = pjoin(OUT, "gene_tables", "dramv_kofam_hits_cpm.tsv")
