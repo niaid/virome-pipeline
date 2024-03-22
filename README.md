@@ -6,9 +6,9 @@ written by Lauren Krausfeldt & Poorani Subramanian - bioinformatics@niaid.nih.go
 
 ## Description
 
-This is a pipeline for exploring viruses (ssDNA, dsDNA phage, and giant DNA viruses) and viral diversity in metagenomes. The pipeline accepts assembly (.fasta) and binary alignment map (.bam) files as input. These files are produced from the WGSA2 pipeline in Nephele<sup>1</sup>. The output of this pipeline provides viral genomes found in the metagenome assembly, their taxonomy and level of completeness, viral functional genes and their abundances, and vOTU abundances and their host taxonomy. 
+This is a pipeline for exploring viruses (ssDNA, dsDNA phage, and giant DNA viruses) and viral diversity in metagenomes. The pipeline accepts assembly (.fasta) and binary alignment map (.bam) files as input. (These files could be produced from the [WGSA2 pipeline in Nephele](https://nephele.niaid.nih.gov/pipeline_details/wgsa/)<sup>1</sup> ). The output of this pipeline provides viral genomes found in the metagenome assembly, their taxonomy and level of completeness, viral functional genes and their abundances, and vOTU abundances and their host taxonomy. 
 
-The pipeline first searchs for viral genomes using Genomad<sup>2</sup>, which also provides viral taxonomy and functional classification of each viral genomes. The viral genomes are also functionally classified with dramv<sup>3</sup> and (optionally) diamond<sup>4</sup> using the nr database. Gene abundances per sample are produced from these outputs using verse<sup>5</sup>. From here, the user has the option to filter the resulting sequences based on completeness using checkv<sup>6</sup>. Either the output of genomad or checkv is used to cluster viral genomes with bbtools dedupe<sup>7</sup> and mmseqs<sup>8</sup> to produce vOTUs<sup>9</sup>. Finally, abundances and host taxonomy of vOTUs are produced. 
+The pipeline first searchs for viral genomes using geNomad<sup>2</sup>, which also provides viral taxonomy and functional classification of each viral genomes. The viral genomes are also functionally classified with DRAM-v<sup>3</sup> and (optionally) diamond<sup>4</sup> using the nr database. Gene abundances per sample are produced from these outputs using VERSE<sup>5</sup>. From here, the user has the option to filter the resulting sequences based on completeness using CheckV<sup>6</sup>. Either the output of geNomad or CheckV is used to cluster viral genomes with BBTools dedupe<sup>7</sup> and mmseqs<sup>8</sup> to produce vOTUs<sup>9</sup>. Finally, abundances and host taxonomy of vOTUs are produced. 
 
 ### Files
 
@@ -52,6 +52,8 @@ git clone https://github.com/pooranibcbb/virome-pipeline
   ```
 
 4. Success?
+
+![discovir pipeline diagram](docs/discovir.drawio.svg "DiscoVir Pipeline diagram")
 
 ## Notes
 
