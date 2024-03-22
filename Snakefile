@@ -611,10 +611,11 @@ rule gene_tables:
     python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c vogdb_id -c vogdb_hits >{output.vogdb}
 
     ## vogdb heatmap of top genes by prevalence and mean
-    python3 {config[scriptdir]}/scripts/top_genes.py {output.vogdb} -i "vogdb_hits" -m prev >{params.top_vogids}
+    echo "Making heatmap of top VOG genes by prevalence and abundance." 
+    python3 {config[scriptdir]}/scripts/top_genes.py {output.vogdb} -i "vogdb_hits" -m prev -n 25 >{params.top_vogids}
     export PYTHONPATH={params.pythonpath}
     python3 {config[scriptdir]}/scripts/plotnine_heatmap.py {params.top_vogids} {params.vogdb_heatmap} \
-           -t "Heatmap of top VOG genes" -d "vogdb_hits" -a "cpm" 
+           -t "Top VOG genes" -d "vogdb_hits" -a "cpm" 
      
 
     ## rm {params.samplelist}

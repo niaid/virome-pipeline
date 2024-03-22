@@ -59,7 +59,7 @@ The subfolders inside the sample folder are:
     -   *dramv-annotate/:* directory of DRAM-v gene annotations - using all DRAM-v databases
     -   *dramv-distill:* directory containing the output of DRAM-v's distill step which identifies AMGs
         -   *dramv-distill/amg_summary.tsv:* table of potential AMGs
-    -   \*abund_amgs/{sample}\_amgs.count.gene.cpm.txt:\* abundance estimates of genes
+    -   *abund_amgs/{sample}\_amgs.count.gene.cpm.txt:* abundance estimates of genes
     
 -   **diamond (optional):** if the `run_diamond` option is chosen, this folder contains the output of annotating the geNomad-predicted genes by aligning sequences with diamond to NCBI's nr database.
 
@@ -85,7 +85,7 @@ The subfolders inside the sample folder are:
            -  *flat_DB_clu.tsv*: Tab separated file displaying IDs of sequences within each cluster. 
            -  *representative_sequences.fasta*: FASTA sequences of viral genome representing each cluster, which becomes the vOTU. FASTA names include names of all viral genomes within each cluster. 
            -  *representative_sequences.renamed.fasta*: FASTA sequences of viral genome representing each cluster, which becomes the vOTU. FASTA names are changed so that they are only the representative sequence. 
-           -  *mmseqs2_log*: Log file to check for all (STDOUT and STDERR) messages from this pipeline
+           -  *mmseqs2.log*: log file
            -  **DB**: Directory containing mmseqs2 outputs and indexes for database. 
 
 -   **vOTU_Host_predictions_iphop (optional)**: if the `run_iphop` option is chosen, this will contain outputs of [iPHoP](https://bitbucket.org/srouxjgi/iphop/src/main/#markdown-header-main-output-files)
@@ -97,7 +97,7 @@ The subfolders inside the sample folder are:
     -   *dramv_kofam_hits_cpm.tsv*: A matrix of abundances (CPM) of kofam hits from DRAM-v. 
     -   *dramv_pfam_hits_cpm.tsv*: A matrix of abundances (CPM) of Pfam hits from DRAM-v. 
     -   *dramv_vogdb_hits_cpm.tsv*: A matrix of abundances (CPM) of VOGID hits from DRAM-v. 
-    -   *dramv_vogdb_heatmap_cpm.pdf*: Heatmap of abundances (CPM) of top VOGID hits from DRAM-v.
+    -   *dramv_vogdb_heatmap_cpm.pdf*: Heatmap of abundances (CPM) of top (by prevalence and abundance) VOGID hits from DRAM-v.
     -   *amg_cpm.tsv*: If the AMG option is selected, this file will be produced containing a matrix of CPM abundances of AMGs for each sample. 
     -   *amg_heatmap_cpm.pdf*: Heatmap of abundances (CPM) of AMGs. 
 
