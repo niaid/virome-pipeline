@@ -103,4 +103,4 @@ The subfolders inside the sample folder are:
 
 ### Pipeline diagram
 
-![discovir pipeline diagram](/Users/subramanianp4/nephele/discovir/discovir.drawio.svg "DiscoVir Pipeline diagram"){ height=auto }\
+![discovir pipeline diagram](discovir.drawio.svg "DiscoVir Pipeline diagram"){ height=auto }\
