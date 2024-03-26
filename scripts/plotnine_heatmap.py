@@ -40,9 +40,10 @@ parser.add_argument("-a", "--abund", help="abundance value in table. used for la
 parser.add_argument("-t", "--title", help="Title of heatmap; double quoted")
 parser.add_argument("-d", "--dropcols", help="Columns to drop/remove before plotting - separated by commas; double quoted")
 parser.add_argument("-f", "--plotfiletype", help="File type of output plot. (default: %(default)s)", choices=['pdf', 'png', 'both'], default='both')
+parser.add_argument("--debug", help="print debug messages", action='store_true')
 args = parser.parse_args()
 
-print(args, file=sys.stderr)
+if args.debug: print(args, file=sys.stderr)
 
 ## Load the CSV file
 inputdf = pd.read_csv(args.inputfile, sep='\t', index_col=False)

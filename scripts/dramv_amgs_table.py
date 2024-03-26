@@ -18,9 +18,10 @@ parser.add_argument("-d", "--dramv", help="which dramv directory do you want to 
 parser.add_argument("-r", "--verse", help="which verse directory do you want to use the abundances from.  (default: %(default)s)", default="amgs/abund_amgs")
 parser.add_argument("-v", "--value", help="what value from abundance file to fill in the table (default: %(default)s)", choices = ['count', 'cpm', 'rpk'], default = 'count')
 parser.add_argument("-s", "--suffix", help="suffix for file with abundances (default: %(default)s)", default = "_amgs.count.gene.cpm.txt")
+parser.add_argument("--debug", help="print debug messages", action='store_true')
 args = parser.parse_args()
 
-print(args, file=sys.stderr)
+if args.debug: print(args, file=sys.stderr)
 
 def read_abund(abundfile, amgtable, value, sample):
     """abundfile: abundance filename - output of verse

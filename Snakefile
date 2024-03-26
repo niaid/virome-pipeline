@@ -429,10 +429,10 @@ rule amgs:
         DRAM-v.py annotate -i {input.fasta} \
         -v {input.tab} \
         -o {params.annot_outdir} --skip_trnascan \
-        --threads {threads} --min_contig_size {config[vs_min_length]} 1>>{log}
+        --threads {threads} --min_contig_size {config[vs_min_length]} 1>>{log} 2>>{log}
        
         DRAM-v.py distill -i {params.annot_outdir}/annotations.tsv \
-        -o {params.distill_outdir} --log_file_path {log} 1>>{log}
+        -o {params.distill_outdir} --log_file_path {log} 1>>{log} 2>>{log}
 
     echo "dramv for amgs from {wildcards.sample} finished."
 
@@ -476,7 +476,7 @@ rule abund_amgs:
         -u {params.outdir}/unmapped_features.txt \
         -dir {params.outdir}/intermediate_files \
         -p 1 -chroms {params.intermdir}/chroms.txt \
-        -exclude_partial -a 0.9 2>{log} 1>>{log}
+        -exclude_partial -a 0.9 2>>{log} 1>>{log}
 
     ## remove double quotes
     sed 's/\"//g' {params.liftoff_gff} >{params.outdir}/temp.liftoff.gff && mv {params.outdir}/temp.liftoff.gff {params.liftoff_gff}
@@ -516,7 +516,7 @@ rule dramv:
   
         DRAM-v.py annotate -i {input.fasta} \
         -o {params.outdir}/dramv-annotate --skip_trnascan \
-        --threads {threads} --min_contig_size {config[vs_min_length]} 1>>{log}
+        --threads {threads} --min_contig_size {config[vs_min_length]} 1>>{log} 2>>{log}
 
     echo "dramv for functional annotation on viral genomes from geNomad in {wildcards.sample} finished." 
 

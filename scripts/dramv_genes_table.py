@@ -18,6 +18,8 @@ parser.add_argument("-d", "--dramv", help="which dramv directory do you want to 
 parser.add_argument("-c", "--column", help=f"columns in dramv annotations file from which to make the gene table. can use more than once for more than one column (default: {default_column})", nargs='*', action='append')
 parser.add_argument("-v", "--value", help="what value from abundance file to fill in the table (default: %(default)s)", choices = ['count', 'cpm', 'rpk'], default = 'count')
 parser.add_argument("-s", "--suffix", help="suffix for file with abundances (default: %(default)s)", default = "_dramv.count.gene.cpm.txt")
+parser.add_argument("--debug", help="print debug messages", action='store_true')
+
 args = parser.parse_args()
 
 ## deal with column arg
@@ -26,7 +28,7 @@ if args.column is None:
 else:
     args.column = [item for row in args.column for item in row]
 
-print(args, file=sys.stderr)
+if args.debug: print(args, file=sys.stderr)
 
 def read_abund(abundfile, annotable, value, sample):
     """abundfile: abundance filename - output of verse
