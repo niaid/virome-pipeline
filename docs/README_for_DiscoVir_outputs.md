@@ -91,6 +91,8 @@ The subfolders inside the sample folder are:
 -   **vOTU_Host_predictions_iphop (optional)**: if the `run_iphop` option is chosen, this will contain outputs of [iPHoP](https://bitbucket.org/srouxjgi/iphop/src/main/#markdown-header-main-output-files)
     -   *Host_prediction_to_genome_m##.csv*: Files containing summary information of host predictions. Host predictions are made at the genome level. 
     -   *Host_prediction_to_genus_m##.csv*: Files containing summary information of host predictions. Host predictions are made at the genus level. 
+    -   *Host_cpm_table.csv*: Matrix of abundances (CPM) of phage hosts of vOTUs for each sample predicted from iphop.
+    -   *Host.krona.html*: Krona plots of host taxonomy. 
 
 -   **gene_tables**:
 

@@ -114,6 +114,16 @@ iphop:
   log: 'logs'
   jobname: 'all'
 
+iphop_abund:
+  threads: 2
+  h_vmem: 4G
+  extra: '-l quick'
+  modules:
+    - Python/3.9.5-GCCcore-10.3.0
+    - krona/2.7.1
+  log: 'logs'
+  jobname: 'all'
+  
 diamond:
   threads: 8
   h_vmem: 12G

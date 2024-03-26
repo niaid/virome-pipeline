@@ -15,7 +15,8 @@ SOUT = pjoin(OUT, "{sample}") ## subdirectory for each sample's output (includin
 LOGS = pjoin(OUT, "logs") ## log directory for logfiles of rules involving more than one sample
 IN = config["indir"] ## directory storing all assemblies/input
 VOTU_DIR = pjoin(OUT, "vOTUs")
-VOTU_CL_DIR = pjoin(VOTU_DIR, "vOTU_clustering") 
+VOTU_CL_DIR = pjoin(VOTU_DIR, "vOTU_clustering")
+HOST_DIR = pjoin(OUT, "vOTU_Host_prediction_iphop")
 
 
 ## inputs
@@ -666,9 +667,9 @@ rule iphop:
     threads: clust_conf["iphop"]["threads"]
     envmodules: *clust_conf["iphop"]["modules"]
     input: fasta = rules.mmseqs.output.renamed_DB_clu_rep_fasta
-    params: outdir = pjoin(OUT, "vOTU_Host_prediction_iphop")
-    log: pjoin(OUT, "vOTU_Host_prediction_iphop", "iphop.log")
-    output: pjoin(OUT, "vOTU_Host_prediction_iphop", "Host_prediction_to_genus_m90.csv")
+    params: outdir = pjoin(HOST_DIR)
+    log: pjoin(HOST_DIR, "iphop.log")
+    output: pjoin(HOST_DIR, "Host_prediction_to_genus_m75.csv")
 
     shell:"""
     ## iphop for bacteriophage host calls
@@ -676,6 +677,7 @@ rule iphop:
 
 
     ## cleanup possible previous failed run
+
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
@@ -688,6 +690,40 @@ rule iphop:
     rm -rf {params.outdir}/Wdir
 
     echo "iPHoP finished."
+
+    """
+
+rule iphop_abund:
+    threads: clust_conf["iphop_abund"]["threads"]
+    envmodules: *clust_conf["iphop_abund"]["modules"]
+    input: votu_table = rules.votu.output.votu,
+           host = rules.iphop.output
+    params: outdir = pjoin(HOST_DIR, "tmp"),
+            host_table = pjoin(HOST_DIR, "Host_cpm_table.tsv"),
+    log: pjoin(HOST_DIR, "iphop.log")
+    output: host_krona = pjoin(HOST_DIR, "Host.krona.html")
+         
+            
+
+    shell:"""
+  
+    ## cleanup possible previous failed run
+
+    rm -rf {params.outdir}
+    mkdir -p {params.outdir}
+
+    # make host abundance table
+
+    python3 {config[scriptdir]}/scripts/host_cpm.py {input.votu_table} {input.host} \
+        > {params.host_table} 2>>{log}
+
+    # make krona charts
+
+    python3 {config[scriptdir]}/scripts/format_iphop_and_votu_for_krona.py {input.votu_table} \
+        {input.host} {params.outdir} 1>>{log} 2>>{log}
+       
+    ktImportText -o {output.host_krona} {params.outdir}/*.txt 1>>{log} 2>>{log}
+  
 
     """
 
@@ -751,7 +787,10 @@ rule all:
            IPHOPALL = rules.iphop.output if config["run_iphop"] else [],
            DIAMALL = expand(rules.diamond.output, sample=SAMPLES) if config["run_diamond"] else [],
            DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
+           VS4DRAMVALL = expand(rules.vs4dramv.output, sample=SAMPLES) if config["run_amgs"] else [],
+           AMGSALL = expand(rules.amgs.output, sample=SAMPLES) if config["run_amgs"] else [],
            VERSEDALL = expand(rules.abund_dramv.output.readcounts_genes, sample=SAMPLES),
            GENETABLESALL = rules.gene_tables.output.vogdb,
            VERSEAMGSALL = expand(rules.abund_amgs.output, sample=SAMPLES) if config["run_amgs"] else [],
-           AMGTABLESALL = rules.amg_tables.output.amgs if config["run_amgs"] else []
+           AMGTABLESALL = rules.amg_tables.output.amgs if config["run_amgs"] else [],
+           IPHOPABUND = rules.iphop_abund.output
