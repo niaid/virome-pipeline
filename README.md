@@ -6,7 +6,9 @@ written by Lauren Krausfeldt & Poorani Subramanian - bioinformatics@niaid.nih.go
 
 ## Description
 
-This is a pipeline for exploring viruses (ssDNA, dsDNA phage, and giant DNA viruses) and viral diversity in metagenomes. The pipeline accepts assembly (.fasta) and binary alignment map (.bam) files as input. (These files could be produced from the [WGSA2 pipeline in Nephele](https://nephele.niaid.nih.gov/pipeline_details/wgsa/)<sup>1</sup> ). The output of this pipeline provides viral genomes found in the metagenome assembly, their taxonomy and level of completeness, viral functional genes and their abundances, and vOTU abundances and their host taxonomy. 
+This is a pipeline for exploring viruses (ssDNA, dsDNA phage, and giant DNA viruses) and viral diversity in metagenomes. It can be run in the cloud application [Nephele](https://nephele.niaid.nih.gov) (under Explore) or on HPC.  More [details here](https://nephele.niaid.nih.gov/pipeline_details/discovir).
+
+The pipeline accepts metagenomic assembly sequences (.fasta) and binary alignment map (.bam) files of the reads mapped back to the assemblies as input. (These files could be produced from the [WGSA2 pipeline in Nephele](https://nephele.niaid.nih.gov/pipeline_details/wgsa/)<sup>1</sup> ). The output of this pipeline provides viral genomes found in the metagenome assembly, their taxonomy and level of completeness, viral functional genes and their abundances, and vOTU abundances and their host taxonomy. 
 
 The pipeline first searchs for viral genomes using geNomad<sup>2</sup>, which also provides viral taxonomy and functional classification of each viral genomes. The viral genomes are also functionally classified with DRAM-v<sup>3</sup> and (optionally) diamond<sup>4</sup> using the nr database. Gene abundances per sample are produced from these outputs using VERSE<sup>5</sup>. From here, the user has the option to filter the resulting sequences based on completeness using CheckV<sup>6</sup>. Either the output of geNomad or CheckV is used to cluster viral genomes with BBTools dedupe<sup>7</sup> and mmseqs<sup>8</sup> to produce vOTUs<sup>9</sup>. Finally, abundances and host taxonomy of vOTUs are produced. 
 
@@ -57,7 +59,7 @@ git clone https://github.com/pooranibcbb/virome-pipeline
 
 ## Notes
 
-- This is tested to run on Locus.  However, it would be easy to adapt to another HPC that uses environment modules by making your own cluster config file (with the correct module names and job parameters), and your own job submit script (in particular modifying the `$clustercmd` for whatever job scheduler your HPC uses).
+- This is tested to run on NIAID's HPC Locus.  However, it would be easy to adapt to another HPC that uses environment modules by making your own cluster config file (with the correct module names and job parameters), and your own job submit script (in particular modifying the `$clustercmd` for whatever job scheduler your HPC uses).
 - In the future, we will work on making it more general (perhaps using conda or a containerized workflow instead of environment modules)
 - Also, adding additional steps for specialized analysis and making the pipeline more flexible.
 
