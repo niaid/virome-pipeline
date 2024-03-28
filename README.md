@@ -30,7 +30,7 @@ The inputs to the pipeline are assembled contigs/scaffolds - one fasta file per 
 
 1. Clone this repo locally:
 ```
-git clone https://github.com/pooranibcbb/virome-pipeline
+git clone https://github.com/niaid/virome-pipeline
 ```
 
 2. Copy over the project config file _project_config.yaml_ and submit script _locus_submit_vp.sh_ to your project working directory, and edit both with the details for your specific project.  
