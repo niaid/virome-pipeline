@@ -580,8 +580,7 @@ rule abund_dramv:
 rule gene_tables:
     threads: clust_conf["gene_tables"]["threads"]
     envmodules: clust_conf["gene_tables"]["modules"]
-    input: abund = expand(rules.abund_dramv.output.readcounts_genes, sample=SAMPLES),
-           amgs = expand(rules.abund_amgs.output.readcounts_genes, sample=SAMPLES)
+    input: abund = expand(rules.abund_dramv.output.readcounts_genes, sample=SAMPLES)
     params: outdir = pjoin(OUT, "gene_tables"),
             samp = SAMPLES,
             samplelist = pjoin(OUT, "gene_tables", "samplelist.txt"),
