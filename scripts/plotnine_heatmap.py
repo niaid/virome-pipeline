@@ -10,6 +10,7 @@ https://plotnine.readthedocs.io/en/stable/index.html
 import argparse
 import pandas as pd
 import sys
+import numpy as np
 
 from plotnine import (
     ggplot,
@@ -27,7 +28,8 @@ from plotnine import (
     element_rect,
     element_text,
     scale_fill_continuous,
-    ggtitle
+    ggtitle,
+    labs
 )
 from mizani.transforms import log1p_trans
 
@@ -61,6 +63,24 @@ if (args.dropcols is not None):
 y_axis = inputdf.columns[0]
 inputdf = inputdf.set_index(y_axis)
 
+## limits for plot
+minval = min(inputdf.min())
+if np.round(minval, -1) < minval: minval = np.round(minval, -1) 
+maxval = max(inputdf.max())
+if np.round(maxval, -1) > maxval: maxval = np.round(maxval, -1) 
+
+## print warning if all values are 0
+if minval == maxval:
+    if minval == 0:
+        print(f"WARNING: All values in input table are 0.", file=sys.stderr)
+    else:
+        print(f"WARNING: All values in input table are identical: {minval}.", file=sys.stderr)
+
+## calculate 5 even breaks - well, max 5.  if after rounding, 2 values are the same,
+## only one is kept with "unique"
+mybreaks = list(np.unique(np.round(np.expm1(np.linspace(np.log1p(minval), np.log1p(maxval), 5)), decimals = -1)))
+if args.debug: print(mybreaks, file=sys.stderr)
+
 ## dimensions of plot
 width = float(max(inputdf.shape[1] / 4, 5))
 height = float(max((inputdf.shape[0] / 6.25) + 0.5, 5))
@@ -71,7 +91,7 @@ df = inputdf.stack().reset_index(name=args.abund)
 df = df.rename(columns={'level_1': 'sample'})
 
 ## make plot
-ggp = ggplot(df, aes('sample', y_axis, fill=args.abund)) + geom_tile(aes(width=.95, height=.95)) + coord_equal() + scale_fill_continuous(trans = log1p_trans) + theme(axis_text_x=element_text(rotation=90), figure_size=(width, height))  
+ggp = ggplot(df, aes('sample', y_axis, fill=args.abund)) + geom_tile(aes(width=.95, height=.95)) + coord_equal() + scale_fill_continuous(trans = log1p_trans, limits = [minval, maxval], breaks=mybreaks) + labs(caption = "abundances are (natural) log-scaled") + theme(axis_text_x=element_text(rotation=90), figure_size=(width, height))  
 
 ## add title if needed
 if (args.title is not None):
