@@ -30,12 +30,12 @@ hostselect = host[['Virus', 'Host genus']]
 
 hostselect[['Domain', 'Phylum', 'Class', 'Order', 'Family', 'Genus']] = hostselect['Host genus'].str.split(';', expand=True)
 
-# host.to_csv("tax_split_check.tsv", sep="\t")
+#hostselect.to_csv("tax_split_check.tsv", sep="\t")
 
 ## If there are two genus calls for the same viral genome, replace genus calls with _g so the call will be made at the family level instead 
 
 hostselect['Genus'] = np.where(hostselect['Virus'].duplicated(), 'g_', hostselect['Genus'])
-#host.to_csv("g_label_on_dups_check.tsv", sep="\t")
+#hostselect.to_csv("g_label_on_dups_check.tsv", sep="\t")
 
 ## merge data frames on genome name 
 merged = votu.merge(hostselect, left_on='repseq', right_on='Virus')
@@ -48,9 +48,22 @@ dedupe = merged.drop_duplicates('repseq', keep='last')
 dedupe['Host_genus'] = dedupe[['Domain','Phylum', 'Class', 'Order', 'Family', 'Genus']].agg(';'.join, axis=1)
 #dedupe.to_csv("dropped_addcolumntest.tsv", sep = "\t")
 
-## sum by host taxonomy to get CPM table of hosts 
 
-sum = dedupe.groupby(['Host_genus']).sum()
+# remove unnecessary columns that might be making an issue with sum
+pruned = dedupe.drop([dedupe.columns[0], 'repseq', 'Virus', 'Host genus', 'Domain', 'Phylum',
+'Class', 'Order', 'Family', 'Genus'], axis=1)
+
+
+#pruned.to_csv("check_removal.tsv", sep = "\t")
+
+
+# move the host_genus column to be the names of the rows 
+
+pruned.insert(0, 'Host_genus', pruned.pop('Host_genus'))
+#pruned.to_csv("pruned_reorder_test.tsv", sep = "\t")
+
+## sum by host taxonomy to get CPM table of hosts 
+sum = pruned.groupby(['Host_genus']).sum()
 sum.to_csv(sys.stdout, sep = "\t")
 
 
