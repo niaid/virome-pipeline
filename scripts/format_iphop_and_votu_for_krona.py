@@ -27,12 +27,14 @@ tax[['Domain', 'Phylum', 'Class', 'Order', 'Family', 'Genus']] = tax['Host genus
 #tax.to_csv('check_for_split.csv', index=True)
 
 tax['Genus'] = np.where(tax['Virus'].duplicated(), 'g_', tax['Genus'])
-tax.to_csv('check_for_replace.csv', index=True)
+#tax.to_csv('check_for_replace.csv', index=True)
 
 tax = tax.drop_duplicates('Virus', keep='last')
-tax.to_csv('check_for_dedupe.csv', index=True)
+#tax.to_csv('check_for_dedupe.csv', index=True)
 
 tax.set_index('Virus', inplace=True)
+
+tax=tax.drop(columns=['Host genus'])
 
 def merge_and_write(v,t):
     s = str(v.columns[0])
