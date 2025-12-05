@@ -21,6 +21,7 @@ The pipeline first searchs for viral genomes using geNomad<sup>2</sup>, which al
 - [_locus_submit_vp.sh_](locus_submit_vp.sh): batch job submit script for running the pipeline on Locus
 - *[scripts](scripts)*: see [scripts README](scripts/README.md)
 - *[docs/README_for_DiscoVir_outputs.md](docs/README_for_DiscoVir_outputs.md)*: explanation of outputs of the pipeline
+- Video: [Viral_Metagenomics_Analysis_subtitled.mp4](https://s3.amazonaws.com/proj-bip-prod-publicread/training/virome-pipeline/Viral_Metagenomics_Analysis_subtitled.mp4)
 
 ## Running the Pipeline
 
