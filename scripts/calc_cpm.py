@@ -11,8 +11,9 @@ and outputs to stdout 2 additional columns rpk and tpm
 import pandas as pd
 import sys
 
-df = pd.read_csv(sys.argv[1], sep='\t')
-df['rpk'] = 1000 * df['count'] / df['length']
+df = pd.read_csv(sys.argv[1], sep='\t', skiprows=1)
+df.columns.values[6] = "Count"
+df['rpk'] = 1000 * df['Count'] / df['Length']
 scalefactor = sum(df['rpk']) / 1e6
 df['cpm'] = df['rpk'] / scalefactor
 
