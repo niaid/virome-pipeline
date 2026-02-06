@@ -15,9 +15,8 @@ genomad:
 abund_genomad:
   threads: 8
   modules:
-    - /hpcdata/bcbb/shared/microbiome_share/software/gffread/gffread
+    - /hpcdata/bcbb/shared/microbiome_share/software/gffread/
     - subread/2.0.6
-    - Python/3.9.5-GCCcore-10.3.0
 
 checkv:
   threads: 8
