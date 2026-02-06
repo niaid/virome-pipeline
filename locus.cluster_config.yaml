@@ -15,7 +15,8 @@ genomad:
 abund_genomad:
   threads: 8
   modules:
-    - verse/0.1.5
+    - /hpcdata/bcbb/shared/microbiome_share/software/gffread/gffread
+    - subread/2.0.6
     - Python/3.9.5-GCCcore-10.3.0
 
 checkv:
@@ -69,7 +70,7 @@ abund_dramv:
   threads: 8
   h_vmem: 8G
   modules:
-    - verse/0.1.5
+    - subread/2.0.6
     - Python/3.9.5-GCCcore-10.3.0
     - liftoff/1.6.3-Python-3.9.12
 
@@ -92,7 +93,7 @@ abund_amgs:
   h_vmem: 8G
   extra: '-l quick'
   modules:
-    - verse/0.1.5
+    - subread/2.0.6
     - Python/3.9.5-GCCcore-10.3.0
     - liftoff/1.6.3-Python-3.9.12
 
