@@ -131,13 +131,21 @@ rule abund_genomad:
     python3 {config[scriptdir]}/scripts/genomad_genes2gff.py {input.genes} -m {input.headermap} >{params.prefix_genes}.gff
     verse -a {params.prefix_genes}.gff -o {params.prefix_genes} -g ID -z 1 -t CDS -l -T {threads} {input.bam} 1>>{log}
 
+    
+    gffread {params.prefix_genes}.gff -o {params.prefix_genes}.gtf
+
+    featureCounts -M -T {threads} -O -F 'GTF' -t 'CDS'  -g 'Parent' -a {params.prefix_genes}.gtf -o {params.prefix_genes}  {input.bam} 1>>{log}
+
     python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_genes} >{output.readcounts_genes}
 
     echo "Estimating viral abundances for {wildcards.sample} with verse.  See log file {log}." 
 
     ## make gff from virus summary; use default -z 1 instead of -z 5
     python3 {config[scriptdir]}/scripts/genomad_virus2gff.py {input.virus} -m {input.headermap} >{params.prefix_virus}.gff
-    verse -a {params.prefix_virus}.gff -o {params.prefix_virus} -g ID -z 1 -t CDS -l -T {threads} {input.bam} 1>>{log}
+
+    gffread {params.prefix_virus}.gff -o {params.prefix_virus}.gtf
+
+    featureCounts -M -T {threads} -O -F 'GTF' -t 'CDS'  -p -g 'Parent' -a {params.prefix_virus}.gtf -o {params.prefix_virus}  {input.bam} 1>>{log}
 
     python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_virus} >{output.readcounts_virus}
 
@@ -569,7 +577,8 @@ rule abund_dramv:
     sed 's/\"//g' {params.liftoff_gff} >{params.outdir}/temp.liftoff.gff && mv {params.outdir}/temp.liftoff.gff {params.liftoff_gff}
 
     ## get reads counts
-    verse -a {params.liftoff_gff} -o {params.prefix_genes} -g ID -z 1 -t gene -l -T {threads} {input.bam} 1>>{log}
+
+    featureCounts -M -T {threads} -O -F 'GTF' -t 'CDS'  -g 'Parent' -a {params.liftoff_gff} -o {params.prefix_genes}  {input.bam} 1>>{log}
 
     python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_genes} >{output.readcounts_genes}
     rm {params.counts_only_genes}
