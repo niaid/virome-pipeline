@@ -24,6 +24,10 @@ SAMPLES = list(config["samples"].split())
 if SAMPLES is None:
     sys.exit("Sample prefixes are needed")
 
+## for featureCounts, short reads/paired end use -p, long reads use -L
+FC_FLAG = "-p" if config["read_type"] == "short" else "-L"
+print(FC_FLAG)
+
 ################ RULES ###########################
 onerror:
      print("An error occurred in the virome pipeline.")
@@ -121,33 +125,23 @@ rule abund_genomad:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-    ## estimate gene abundances with verse
-    verse -v
-    verse -v >>{log}
-
-    echo "Estimating abundances of genes from geNomad for {wildcards.sample} with verse. See log file {log}." 
+    echo "Estimating abundances of genes from geNomad for {wildcards.sample} with subread featureCounts. See log file {log}." 
 
     ## make gff from virus genes files
-    python3 {config[scriptdir]}/scripts/genomad_genes2gff.py {input.genes} -m {input.headermap} >{params.prefix_genes}.gff
-    verse -a {params.prefix_genes}.gff -o {params.prefix_genes} -g ID -z 1 -t CDS -l -T {threads} {input.bam} 1>>{log}
+    python3 {config[scriptdir]}/scripts/genomad_genes2gff.py {input.genes} -m {input.headermap} >{params.prefix_genes}.gff 2>>{log}
 
-    
-    gffread {params.prefix_genes}.gff -o {params.prefix_genes}.gtf
+    featureCounts -M -T {threads} -O -F 'GTF' -t 'CDS' {FC_FLAG} -g 'ID' -a {params.prefix_genes}.gff -o {params.counts_only_genes} {input.bam} 1>>{log} 2>>{log}
 
-    featureCounts -M -T {threads} -O -F 'GTF' -t 'CDS'  -g 'Parent' -a {params.prefix_genes}.gtf -o {params.prefix_genes}  {input.bam} 1>>{log}
+    python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_genes} >{output.readcounts_genes} 2>>{log}
 
-    python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_genes} >{output.readcounts_genes}
+    echo "Estimating viral abundances for {wildcards.sample} with subread featureCounts.  See log file {log}." 
 
-    echo "Estimating viral abundances for {wildcards.sample} with verse.  See log file {log}." 
+    ## make gff from virus summary
+    python3 {config[scriptdir]}/scripts/genomad_virus2gff.py {input.virus} -m {input.headermap} >{params.prefix_virus}.gff 2>>{log}
 
-    ## make gff from virus summary; use default -z 1 instead of -z 5
-    python3 {config[scriptdir]}/scripts/genomad_virus2gff.py {input.virus} -m {input.headermap} >{params.prefix_virus}.gff
+    featureCounts -M -T {threads} -O -F 'GTF' -t 'CDS' {FC_FLAG} -g 'ID' -a {params.prefix_virus}.gff -o {params.counts_only_virus} {input.bam} 1>>{log} 2>>{log}
 
-    gffread {params.prefix_virus}.gff -o {params.prefix_virus}.gtf
-
-    featureCounts -M -T {threads} -O -F 'GTF' -t 'CDS'  -p -g 'Parent' -a {params.prefix_virus}.gtf -o {params.prefix_virus}  {input.bam} 1>>{log}
-
-    python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_virus} >{output.readcounts_virus}
+    python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_virus} >{output.readcounts_virus} 2>>{log}
 
 
     """
@@ -787,18 +781,19 @@ rule diamond:
 ###### ALL RULE #############
 rule all:
     input: GENOMADALL = expand(rules.genomad.output.fna, sample=SAMPLES),
-           CHECKVALL = expand(rules.checkv_filter.output, sample=SAMPLES),
-           VERSEGALL = expand(rules.abund_genomad.output.readcounts_virus, sample=SAMPLES),
-           BBTOOLS_DEDUPEALL = rules.bbtools_dedupe.output.unique_seqs,
-	   MMSEQSALL = rules.mmseqs.output.DB_clu_rep_fasta,
-           VOTUALL = rules.votu.output.votu,
-           IPHOPALL = rules.iphop.output if config["run_iphop"] else [],
-           DIAMALL = expand(rules.diamond.output, sample=SAMPLES) if config["run_diamond"] else [],
-           DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
-           VS4DRAMVALL = expand(rules.vs4dramv.output, sample=SAMPLES) if config["run_amgs"] else [],
-           AMGSALL = expand(rules.amgs.output, sample=SAMPLES) if config["run_amgs"] else [],
-           VERSEDALL = expand(rules.abund_dramv.output.readcounts_genes, sample=SAMPLES),
-           GENETABLESALL = rules.gene_tables.output.vogdb,
-           VERSEAMGSALL = expand(rules.abund_amgs.output, sample=SAMPLES) if config["run_amgs"] else [],
-           AMGTABLESALL = rules.amg_tables.output.amgs if config["run_amgs"] else [],
-           IPHOPABUND = rules.iphop_abund.output
+           GENOMADABUNDALL = expand(rules.abund_genomad.output.readcounts_virus, sample=SAMPLES),
+           # CHECKVALL = expand(rules.checkv_filter.output, sample=SAMPLES),
+           # VERSEGALL = expand(rules.abund_genomad.output.readcounts_virus, sample=SAMPLES),
+           # BBTOOLS_DEDUPEALL = rules.bbtools_dedupe.output.unique_seqs,
+	   # MMSEQSALL = rules.mmseqs.output.DB_clu_rep_fasta,
+           # VOTUALL = rules.votu.output.votu,
+           # IPHOPALL = rules.iphop.output if config["run_iphop"] else [],
+           # DIAMALL = expand(rules.diamond.output, sample=SAMPLES) if config["run_diamond"] else [],
+           # DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
+           # VS4DRAMVALL = expand(rules.vs4dramv.output, sample=SAMPLES) if config["run_amgs"] else [],
+           # AMGSALL = expand(rules.amgs.output, sample=SAMPLES) if config["run_amgs"] else [],
+           # VERSEDALL = expand(rules.abund_dramv.output.readcounts_genes, sample=SAMPLES),
+           # GENETABLESALL = rules.gene_tables.output.vogdb,
+           # VERSEAMGSALL = expand(rules.abund_amgs.output, sample=SAMPLES) if config["run_amgs"] else [],
+           # AMGTABLESALL = rules.amg_tables.output.amgs if config["run_amgs"] else [],
+           # IPHOPABUND = rules.iphop_abund.output

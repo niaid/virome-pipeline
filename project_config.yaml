@@ -12,6 +12,9 @@ outdir: virome_output
 
 ### rule-specific parameters that could change between projects
 
+# read type: short (e.g. Illumina NGS) or long (e.g. ONT or PacBio)
+read_type: short
+
 #genomad database current location
 genomaddb: /hpcdata/bio_data/genomad/genomad_db/
 # genomad filtering. options are: default, relaxed, conservative
