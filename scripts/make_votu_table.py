@@ -23,8 +23,9 @@ def read_abund(abundfile, mmseqs, value, sfx=""):
        value: which value column from abundfile to include
        sfx: suffix to remove from abundfile for sample name
     """
+    print(abundfile, file=sys.stderr)
     a = pd.read_csv(abundfile, sep='\t')
-    a = a.merge(mmseqs, how='inner', left_on = 'gene', right_on = 'seq')
+    a = a.merge(mmseqs, how='inner', left_on = 'Geneid', right_on = 'seq')
     a = a[['repseq', value]]
     samplename = abundfile.split("/")[-1]
     a['sample'] = samplename.removesuffix(sfx)

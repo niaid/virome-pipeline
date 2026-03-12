@@ -26,7 +26,6 @@ if SAMPLES is None:
 
 ## for featureCounts, short reads/paired end use -p, long reads use -L
 FC_FLAG = "-p" if config["read_type"] == "short" else "-L"
-print(FC_FLAG)
 
 ################ RULES ###########################
 onerror:
@@ -162,6 +161,9 @@ rule checkv:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
+    echo ${{MODULEPATH}}
+    module load checkv
+
     checkv | head -n1
     checkv | head -n1 >>{log}
 
@@ -240,8 +242,6 @@ rule bbtools_dedupe:
     rm -rf {params.outdir}
     mkdir -p {params.outdir}
 
-    dedupe.sh --version
-
     echo "Starting vOTU generation. See log file {log}."
   
     echo "Collecting viral genomes from all samples." 
@@ -250,7 +250,7 @@ rule bbtools_dedupe:
 
     echo "Deduplicating viral genomes."
 
-    dedupe.sh in={params.input_ctgs} out={output.unique_seqs} csf={params.stats} minscaf={config[vs_min_length]} \
+    bbtools dedupe in={params.input_ctgs} out={output.unique_seqs} csf={params.stats} minscaf={config[vs_min_length]} \
 	mergenames=t ex=f usejni=t threads={threads} 1>>{log}
 
 
@@ -326,7 +326,6 @@ rule votu:
     params: outdir = pjoin(VOTU_DIR),
             filelist = pjoin(VOTU_DIR, "abundfiles.txt"),
             summlist = pjoin(VOTU_DIR, "summaryfiles.txt"),
-            pythonpath = clust_conf["votu"]["pythonpath"],
             mapping = config["mapping_file"],
             obs_met = pjoin(VOTU_DIR, "obs_met.tsv"),
             tempbiom = pjoin(VOTU_DIR, "temp.biom")
@@ -361,12 +360,12 @@ rule votu:
 
     ## make biom file
     sed '0,/seq_name/{{s/seq_name/\#repseq/}}' {output.gmdanno} | awk -F $'\t' '{{ print $1"\t"$11 }}' >{params.obs_met}
-    export PYTHONPATH={params.pythonpath}
-    {params.pythonpath}/bin/biom convert -i {output.votu} -o {params.tempbiom} --to-json --table-type "OTU table"
-    {params.pythonpath}/bin/biom add-metadata -i {params.tempbiom} -o {output.biom} \
+
+    biom convert -i {output.votu} -o {params.tempbiom} --to-json --table-type "OTU table"
+    biom add-metadata -i {params.tempbiom} -o {output.biom} \
          --observation-metadata-fp {params.obs_met} --sc-separated taxonomy --output-as-json
     if [ "{params.mapping}" != "None" ]; then
-        {params.pythonpath}/bin/biom add-metadata -i {output.biom} -o {params.tempbiom} \
+        biom add-metadata -i {output.biom} -o {params.tempbiom} \
          --sample-metadata-fp {params.mapping} --output-as-json
     fi
 
@@ -455,9 +454,9 @@ rule abund_amgs:
             liftoff_gff = pjoin(SOUT, "amgs", "abund_amgs", "{sample}.amgs_genes.liftoff.gff")
     output: readcounts_genes = pjoin(SOUT, "amgs", "abund_amgs", "{sample}_amgs.count.gene.cpm.txt")
     shell:"""
+    module load liftoff
     ## lift gene features from trimmed virsorter2 contigs to original with liftoff and estimate AMG abundances with verse
     liftoff -V
-    verse -v
 
     ## cleanup possible previous failed run
     rm -rf {params.outdir}
@@ -480,12 +479,14 @@ rule abund_amgs:
         -p 1 -chroms {params.intermdir}/chroms.txt \
         -exclude_partial -a 0.9 2>>{log} 1>>{log}
 
+    module unload liftoff
+
     ## remove double quotes
     sed 's/\"//g' {params.liftoff_gff} >{params.outdir}/temp.liftoff.gff && mv {params.outdir}/temp.liftoff.gff {params.liftoff_gff}
 
-    ## run verse
-    verse -a {params.liftoff_gff} -o {params.prefix_genes} -g ID -z 1 -t gene \
-        -l -T 8 {input.bam} 1>>{log}
+
+    ## run featureCounts
+    featureCounts -M -T {threads} -O -F 'GTF' -t 'gene' {FC_FLAG} -g 'ID' -a {params.liftoff_gff} -o {params.counts_only_genes} {input.bam} 1>>{log} 2>>{log}
 
     ## calc cpms
     python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_genes} >{output.readcounts_genes}
@@ -539,16 +540,15 @@ rule abund_dramv:
     log: pjoin(SOUT, "dramv", "abund_dramv", "{sample}" + ".abund_dramv.log")
     output: readcounts_genes = pjoin(SOUT, "dramv", "abund_dramv", "{sample}_dramv.count.gene.cpm.txt")
     shell:"""
-    ## lift gene features from trimmed contigs to original with liftoff and estimate gene abundances with verse
-    liftoff -V
-    verse -v
+    module load liftoff
+    ## lift gene features from trimmed contigs to original with liftoff and estimate gene abundances with featureCounts
     
 
     ## cleanup possible previous run
     rm -rf {params.outdir}
     mkdir -p {params.intermdir}
 
-   echo "Calculating abundances of genes identified and annotated by DRAM-v using Liftoff and VERSE.  See log file for errors and output {log}." 
+   echo "Calculating abundances of genes identified and annotated by DRAM-v using Liftoff and subread featureCounts.  See log file for errors and output {log}." 
 
     # make chrom file
     grep -v -w "##gff-version" {input.gff} | grep -v -e "^#" | awk '{{ print $1 }}' >{params.intermdir}/1.txt
@@ -564,18 +564,21 @@ rule abund_dramv:
     ## redirect output to a log file otherwise it overwhelms the main log
     liftoff {input.target} {input.reference} -g {params.intermdir}/temp.gff -o {params.liftoff_gff} \
           -u {params.outdir}/unmapped_features.txt -dir {params.intermdir} -p 1 \
-          -chroms {params.intermdir}/chroms.txt -exclude_partial -a 0.9 2>{log} \
+          -chroms {params.intermdir}/chroms.txt -exclude_partial -a 0.9 2>>{log} \
           1>>{log}
+
+    module unload liftoff
 
     ## remove double quotes
     sed 's/\"//g' {params.liftoff_gff} >{params.outdir}/temp.liftoff.gff && mv {params.outdir}/temp.liftoff.gff {params.liftoff_gff}
 
     ## get reads counts
 
-    featureCounts -M -T {threads} -O -F 'GTF' -t 'CDS'  -g 'Parent' -a {params.liftoff_gff} -o {params.prefix_genes}  {input.bam} 1>>{log}
+    featureCounts -M -T {threads} -O -F 'GTF' -t 'gene' {FC_FLAG} -g 'ID' -a {params.liftoff_gff} -o {params.counts_only_genes} {input.bam} 1>>{log} 2>>{log}
 
-    python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_genes} >{output.readcounts_genes}
+    python3 {config[scriptdir]}/scripts/calc_cpm.py {params.counts_only_genes} >{output.readcounts_genes} 2>>{log}
     rm {params.counts_only_genes}
+    rm -f {params.counts_only_genes}.summary
     rm -rf {params.intermdir}
 
     """
@@ -588,9 +591,8 @@ rule gene_tables:
             samp = SAMPLES,
             samplelist = pjoin(OUT, "gene_tables", "samplelist.txt"),
             workingdir = OUT,
-            top_vogids = pjoin(OUT, "gene_tables", "top_dramv_vogdb_hits_cpm.tsv"),
-            vogdb_heatmap = pjoin(OUT, "gene_tables", "dramv_vogdb_heatmap_cpm"),
-            pythonpath = clust_conf["gene_tables"]["pythonpath"]
+            top_vogids = pjoin(OUT, "gene_tables", "top_dramv_vogdb_hits_cpm.tsv")
+    log: pjoin(OUT,"gene_tables", "gene_tables.log")
     output: pfam = pjoin(OUT, "gene_tables", "dramv_pfam_hits_cpm.tsv"),
             vogdb = pjoin(OUT, "gene_tables", "dramv_vogdb_hits_cpm.tsv"),
             kofam = pjoin(OUT, "gene_tables", "dramv_kofam_hits_cpm.tsv")
@@ -607,21 +609,16 @@ rule gene_tables:
 
     ## dramv-annotate abund tables
 
-    echo "Collating abundances of VOGIDs, pfams, and kofams from dramv functional annotation." 
+    echo "Collating abundances of VOGIDs, pfams, and kofams from dramv functional annotation." >>{log}
 
-    python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c pfam_hits >{output.pfam}
-    python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c ko_id -c kegg_hit >{output.kofam}
-    python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c vogdb_id -c vogdb_hits >{output.vogdb}
+    python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c pfam_hits >{output.pfam} 2>>{log}
+    python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c ko_id -c kegg_hit >{output.kofam} 2>>{log}
+    python3 {config[scriptdir]}/scripts/dramv_genes_table.py {params.workingdir} {params.samplelist} -v cpm -c vogdb_id -c vogdb_hits >{output.vogdb} 2>>{log}
 
     ## vogdb heatmap of top genes by prevalence and mean
-    echo "Making heatmap of top VOG genes by prevalence and abundance." 
-    python3 {config[scriptdir]}/scripts/top_genes.py {output.vogdb} -i "vogdb_hits" -m prev -n 25 >{params.top_vogids}
-    export PYTHONPATH={params.pythonpath}
-    python3 {config[scriptdir]}/scripts/plotnine_heatmap.py {params.top_vogids} {params.vogdb_heatmap} \
-           -t "Top VOG genes" -d "vogdb_hits" -a "cpm" 
-     
-
-    ## rm {params.samplelist}
+    echo "Making heatmap of top VOG genes by prevalence and abundance." >>{log}
+    python3 {config[scriptdir]}/scripts/top_genes.py {output.vogdb} -i "vogdb_hits" -m prev -n 25 >{params.top_vogids} 2>>{log}
+    rm {params.samplelist}
 
     """
 
@@ -633,9 +630,7 @@ rule amg_tables:
     params: outdir = pjoin(OUT, "gene_tables"),
             samp = SAMPLES,
             samplelist = pjoin(OUT, "gene_tables", "amg_samplelist.txt"),
-            workingdir = OUT,
-            amg_heatmap = pjoin(OUT, "gene_tables", "amg_heatmap_cpm"),
-            pythonpath = clust_conf["amg_tables"]["pythonpath"]
+            workingdir = OUT
     output: amgs = pjoin(OUT, "gene_tables", "amg_cpm.tsv")
     shell:"""
 
@@ -653,12 +648,6 @@ rule amg_tables:
 echo "Collating abundances of AMGs." 
 
     python3 {config[scriptdir]}/scripts/dramv_amgs_table.py {params.workingdir} {params.samplelist} -v cpm >{output.amgs}
-
-    ## heatmap of amgs
-    export PYTHONPATH={params.pythonpath}
-    python3 {config[scriptdir]}/scripts/plotnine_heatmap.py {output.amgs} {params.amg_heatmap} \
-           -t "Heatmap of AMGs" -d "gene_description" -a "cpm" 
-
     rm {params.samplelist}
 
     """
@@ -781,19 +770,18 @@ rule diamond:
 ###### ALL RULE #############
 rule all:
     input: GENOMADALL = expand(rules.genomad.output.fna, sample=SAMPLES),
+           CHECKVALL = expand(rules.checkv_filter.output, sample=SAMPLES),
            GENOMADABUNDALL = expand(rules.abund_genomad.output.readcounts_virus, sample=SAMPLES),
-           # CHECKVALL = expand(rules.checkv_filter.output, sample=SAMPLES),
-           # VERSEGALL = expand(rules.abund_genomad.output.readcounts_virus, sample=SAMPLES),
-           # BBTOOLS_DEDUPEALL = rules.bbtools_dedupe.output.unique_seqs,
-	   # MMSEQSALL = rules.mmseqs.output.DB_clu_rep_fasta,
-           # VOTUALL = rules.votu.output.votu,
+           BBTOOLS_DEDUPEALL = rules.bbtools_dedupe.output.unique_seqs,
+	   MMSEQSALL = rules.mmseqs.output.DB_clu_rep_fasta,
+           VOTUALL = rules.votu.output.votu,
            # IPHOPALL = rules.iphop.output if config["run_iphop"] else [],
            # DIAMALL = expand(rules.diamond.output, sample=SAMPLES) if config["run_diamond"] else [],
-           # DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
+           DRAMVALL = expand(rules.dramv.output, sample=SAMPLES),
            # VS4DRAMVALL = expand(rules.vs4dramv.output, sample=SAMPLES) if config["run_amgs"] else [],
            # AMGSALL = expand(rules.amgs.output, sample=SAMPLES) if config["run_amgs"] else [],
-           # VERSEDALL = expand(rules.abund_dramv.output.readcounts_genes, sample=SAMPLES),
-           # GENETABLESALL = rules.gene_tables.output.vogdb,
+           DRAMVABUNDALL = expand(rules.abund_dramv.output.readcounts_genes, sample=SAMPLES),
+           GENETABLESALL = rules.gene_tables.output.vogdb,
            # VERSEAMGSALL = expand(rules.abund_amgs.output, sample=SAMPLES) if config["run_amgs"] else [],
            # AMGTABLESALL = rules.amg_tables.output.amgs if config["run_amgs"] else [],
            # IPHOPABUND = rules.iphop_abund.output

@@ -37,18 +37,18 @@ def read_abund(abundfile, annotable, value, sample):
        sample: sample name associated with file
     """
     a = pd.read_csv(abundfile, sep='\t')
-    a = a.merge(annotable, how='inner', left_on = 'gene', right_on = 'gene')
+    a = a.merge(annotable, how='inner', left_on = 'Geneid', right_on = 'Geneid')
     a = a[list(annotable.columns) + [value]]
     return(a)
 
 def read_annotate(annofile, column, sample):
     a = pd.read_csv(annofile, sep='\t')
-    a = a.rename(columns={"Unnamed: 0": "gene"})
+    a = a.rename(columns={"Unnamed: 0": "Geneid"})
     ## remove rows where column values are empty https://stackoverflow.com/a/46764265
     a = a[(a[column].values == '').sum(axis=1) < len(column)]
     a = a.dropna(subset=column, thresh=len(column))
     ## get just the relevant columns
-    column = ['gene'] + column
+    column = ['Geneid'] + column
     a = a[column]
     ## add sample column
     a['sample'] = sample
