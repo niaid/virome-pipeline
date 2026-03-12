@@ -1,13 +1,13 @@
-email: address@nih.gov
+email: your_email_address
 ## directory where we clone this repo locally
 scriptdir: /path/to/virome-pipeline
-clusterfile: /path/to/virome-pipeline/locus.cluster_config.yaml
+clusterfile: /path/to/virome-pipeline/biowulf.cluster_config.yaml
 
 ## directories
-workdir: /path/to/workingdir
+workdir: 
 # these directories are relative to the working directory
 # input directory should have assembly FASTA and bam files.  use full path if the input dir is outside of working directory
-indir: input
+indir: 
 outdir: virome_output
 
 ### rule-specific parameters that could change between projects
@@ -16,16 +16,16 @@ outdir: virome_output
 read_type: short
 
 #genomad database current location
-genomaddb: /hpcdata/bio_data/genomad/genomad_db/
+genomaddb: /fdb/genomad/genomad_db/
 # genomad filtering. options are: default, relaxed, conservative
 # see https://portal.nersc.gov/genomad/post_classification_filtering.html
 genomad_filter: default
 
 # checkv database
-checkvdb: /hpcdata/bio_data/checkv/checkv-db-v1.5
+checkvdb: /data/BCBB_microbiome_db/checkv_db/checkv-db-v1.5
 # checkv quality sequences to use for clustering vOTUs
 # options are all, medium, high, complete
-checkv_q: all
+checkv_q: medium
 
 
 # min contig length for dramv and vOTU clustering
@@ -35,7 +35,7 @@ vs_min_length: 5000
 # run virsorter2 to filter contigs (this removes a lot)
 # and then run the sequences through DRAM-v to identify
 # AMGs
-run_amgs: yes
+run_amgs: no
 
 #iphop
 # Run iPHoP?  yes/no
@@ -45,7 +45,7 @@ run_iphop: no
 # Choose min confidence score. Value between 75 and 100. Default is 90. 
 iphop_min_score: 90
 # location of iphop database
-iphopdb: /hpcdata/bio_data/iphop/Sept_2021_pub_rw/
+iphopdb: /fdb/iphop_db/Aug_2023_pub_rw
 
 # diamond db to annotate genes for eventual pathway inference - we use nr
 # yes/no
@@ -57,15 +57,13 @@ diamonddb: /hpcdata/bio_data/DIAMOND_ncbi_db/nr.diamond.dmnd
 
 # input files are expected to be like {indir}/{sample prefix}{assembly_suffix}
 # change to what makes sense for your data
-assembly_suffix: .scaffolds.fasta
+assembly_suffix: .fasta
 
 # {indir}/{sample prefix}{bam_suffix}
-bam_suffix: .bam
+bam_suffix: .markdup.bam
 
 # optional tab separated mapping file - will be added to  biom file.
 mapping_file:
 
 # sample prefixes to be used throughout pipeline
 samples:
-  Sample1
-  Sample2

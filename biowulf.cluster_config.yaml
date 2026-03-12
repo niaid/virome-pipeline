@@ -1,83 +1,83 @@
 __default__:
+    partition: quick,norm
     threads: 16
-    h_vmem: 2G
-    extra: ''
-    tmpdir: "$TMP"
+    mem: 16G
+    time: "4:00:00"
+    extra: "--gres=lscratch:2"
+    tmpdir: "/lscratch/$SLURM_JOB_ID"
     log: '{wildcards.sample}/logs'
     jobname: '{wildcards.sample}'
-    pythonpath: /hpcdata/bcbb/shared/microbiome_share/software/python3.9.5-GCCcore-10.3.0
 ## pythonpath has biom and plotnine libs installed
 
 
 genomad:
-  modules: genomad/1.5.2
+  modules: genomad/1.7.6
+  mem: 32G
 
 abund_genomad:
   threads: 8
   modules:
-    - /hpcdata/bcbb/shared/microbiome_share/software/gffread/
-    - subread/2.0.6
+    - subread/2.1.1
+    - python/3.10
+    
 
 checkv:
   threads: 8
-  h_vmem: 2G
-  modules:
-    - checkv/0.8.1
-    - Python/2.7.15-foss-2018b
+  extra: "--gres=lscratch:2 --export=MODULEPATH=/data/BCBB_microbiome_db/modulefiles:/usr/local/lmod/modulefiles"
+  modules: checkv/0.8.1
 
 checkv_filter:
   threads: 2
-  h_vmem: 8G
-  extra: '-l quick'
-  modules: seqtk/1.3-r106
+  mem: 16G
+  modules: seqtk/1.5
 
 
 bbtools_dedupe:
   threads: 8
-  h_vmem: 8G
-  modules: bbmap/38.90
+  mem: 64G
+  modules: bbtools/39.06
   log: 'logs'
   jobname: 'all'
 
 mmseqs:
-  h_vmem: 15G
-  extra: '-l himem'
+  mem: 240G
   modules:
-    - mmseqs2/14.7e284
-    - Python/3.9.5-GCCcore-10.3.0
+    - mmseqs/2-13-45111-219-gaabc78c
+    - python/3.9
   log: 'logs'
   jobname: 'all'
 
 votu:
   threads: 2
-  h_vmem: 4G
-  extra: '-l quick'
+  mem: 8G
+  time: "1:00:00"
   modules:
-    - Python/3.9.5-GCCcore-10.3.0
-    - krona/2.7.1
+    - biom-format/2.1.15
+    - kronatools/2.8.1
+    - python/3.10
   log: 'logs'
   jobname: 'all'
 
 vs4dramv:
-  modules: virsorter/2.2.3-Python-3.8.10
+  modules: virsorter2/2.2.3
 
 dramv:
-  h_vmem: 3G
-  modules: /hpcdata/bcbb/shared/microbiome_share/modules/dram/1.4.6_ms
+  mem: 48G
+  modules: dram/1.5.0
 
 abund_dramv:
   threads: 8
-  h_vmem: 8G
+  mem: 64G
+  extra: "--gres=lscratch:2 --export=MODULEPATH=/data/BCBB_microbiome_db/modulefiles:/usr/local/lmod/modulefiles"
   modules:
-    - subread/2.0.6
-    - Python/3.9.5-GCCcore-10.3.0
-    - liftoff/1.6.3-Python-3.9.12
+    - subread/2.1.1
+    - python/3.10
+    - liftoff/1.6.3
 
 gene_tables:
   threads: 2
-  h_vmem: 4G
-  extra: '-l quick'
-  modules: Python/3.9.5-GCCcore-10.3.0
+  mem: 8G
+  modules: python/3.10
   log: 'logs'
   jobname: 'all'
 
