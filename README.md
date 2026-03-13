@@ -6,7 +6,7 @@ written by Lauren Krausfeldt & Poorani Subramanian - bioinformatics@niaid.nih.go
 
 ## Description
 
-This is a pipeline for exploring viruses (ssDNA, dsDNA phage, and giant DNA viruses) and viral diversity in metagenomes. It can be run in the cloud application [Nephele](https://nephele.niaid.nih.gov) (under Explore) or on HPC.  More [details here](https://nephele.niaid.nih.gov/pipeline_details/discovir).
+This is a pipeline for exploring viruses (ssDNA, dsDNA phage, and giant DNA viruses) and viral diversity in metagenomes. It can be run in the cloud application [Nephele](https://nephele.niaid.nih.gov) (under Explore) or on HPC.  More [details here](https://nephele.niaid.nih.gov/pipeline_details/discovir).  It is also available in a [Docker image](docs/README_for_using_docker_image.md).
 
 The pipeline accepts metagenomic assembly sequences (.fasta) and binary alignment map (.bam) files of the reads mapped back to the assemblies as input. (These files could be produced from the [WGSA2 pipeline in Nephele](https://nephele.niaid.nih.gov/pipeline_details/wgsa/)<sup>1</sup> ). The output of this pipeline provides viral genomes found in the metagenome assembly, their taxonomy and level of completeness, viral functional genes and their abundances, and vOTU abundances and their host taxonomy. 
 
@@ -60,6 +60,7 @@ git clone https://github.com/niaid/virome-pipeline
 
 ## Notes
 
+- We provide the code here, but the pipeline is also containerized as a [docker image](docs/README_for_using_docker_image.md).
 - This is tested to run on NIAID's HPC Locus.  However, it would be easy to adapt to another HPC that uses environment modules by making your own cluster config file (with the correct module names and job parameters), and your own job submit script (in particular modifying the `$clustercmd` for whatever job scheduler your HPC uses).
 - In the future, we will work on making it more general (perhaps using conda or a containerized workflow instead of environment modules)
 - Also, adding additional steps for specialized analysis and making the pipeline more flexible.
