@@ -60,10 +60,9 @@ git clone https://github.com/niaid/virome-pipeline
 
 ## Notes
 
-- We provide the code here, but the pipeline is also containerized as a [docker image](docs/README_for_using_docker_image.md).
-- This is tested to run on NIAID's HPC Locus.  However, it would be easy to adapt to another HPC that uses environment modules by making your own cluster config file (with the correct module names and job parameters), and your own job submit script (in particular modifying the `$clustercmd` for whatever job scheduler your HPC uses).
-- In the future, we will work on making it more general (perhaps using conda or a containerized workflow instead of environment modules)
-- Also, adding additional steps for specialized analysis and making the pipeline more flexible.
+- The code here is tested to run on NIAID's HPC Locus, but the pipeline is also containerized as a [docker image](docs/README_for_using_docker_image.md) that can be run on any HPC.  
+- If you do not want to use the docker image, it would be easy to adapt to another HPC that uses environment modules by modifying the [cluster config file](locus.cluster_config.yaml) (with the correct module names and memory/cpu arguments for your HPC), and your own job submit script (in particular modifying the `$clustercmd` for the job scheduler your HPC uses).
+- In the future we hope to add additional steps for specialized analysis and make the pipeline more flexible.
 
 ## References
 
