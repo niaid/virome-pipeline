@@ -10,8 +10,21 @@ This is a pipeline for exploring viruses (ssDNA, dsDNA phage, and giant DNA viru
 
 The pipeline accepts metagenomic assembly sequences (.fasta) and binary alignment map (.bam) files of the reads mapped back to the assemblies as input. (These files could be produced from the [WGSA2 pipeline in Nephele](https://nephele.niaid.nih.gov/pipeline_details/wgsa/)<sup>1</sup> ). The output of this pipeline provides viral genomes found in the metagenome assembly, their taxonomy and level of completeness, viral functional genes and their abundances, and vOTU abundances and their host taxonomy. 
 
-The pipeline first searchs for viral genomes using geNomad<sup>2</sup>, which also provides viral taxonomy and functional classification of each viral genomes. The viral genomes are also functionally classified with DRAM-v<sup>3</sup> and (optionally) diamond<sup>4</sup> using the nr database. Gene abundances per sample are produced from these outputs using VERSE<sup>5</sup>. From here, the user has the option to filter the resulting sequences based on completeness using CheckV<sup>6</sup>. Either the output of geNomad or CheckV is used to cluster viral genomes with BBTools dedupe<sup>7</sup> and mmseqs<sup>8</sup> to produce vOTUs<sup>9</sup>. Finally, abundances and host taxonomy of vOTUs are produced. 
+The pipeline first searchs for viral genomes using geNomad<sup>2</sup>, which also provides viral taxonomy and functional classification of each viral genomes. The viral genomes are also functionally classified with DRAM-v<sup>3</sup> and (optionally) diamond<sup>4</sup> using the nr database. Gene abundances per sample are produced from these outputs using VERSE<sup>5</sup>. From here, the user has the option to filter the resulting sequences based on completeness using CheckV<sup>6</sup>. Either the output of geNomad or CheckV is used to cluster viral genomes with BBTools dedupe<sup>7</sup> and mmseqs<sup>8</sup> to produce vOTUs<sup>9</sup>. Finally, abundances and host taxonomy of vOTUs are produced. In the future we hope to add additional steps for specialized analysis and make the pipeline even more flexible.
 
+## Run the pipeline in Nephele
+
+Nephele is NIAID's free microbiome analysis cloud-based application (https://nephele.niaid.nih.gov) that allows for automated processing of your sequence data without needing the computational resources or access to an HPC. You can read more about DiscoVir in Nephele [here](https://nephele.niaid.nih.gov/user-guide/pipeline-descriptions/discovir). Check out the [Userguide](https://nephele.niaid.nih.gov/user-guide) to get started! 
+
+## Run the pipeline from the Docker image
+
+The pipeline is containerized as a Docker image that can be run on any HPC. Start [here](docs/README_for_using_docker_image.md) to learn how to use DiscoVir Docker image. Detailed instructions can be found [here](https://gallery.ecr.aws/niaid_nephele/pipeline/nephele_virome). All code for each step of the pipeline included in the Docker image can be found in this repo and is updated in tandem with Nephele. 
+
+## Run on Locus HPC
+
+- The code here is tested to run on NIAID's HPC Locus, but it would be easy to adapt to another HPC that uses environment modules.
+- You can do this by modifying the [cluster config file](locus.cluster_config.yaml) (with the correct module names and memory/cpu arguments for your HPC), and your own job submit script (in particular modifying the `$clustercmd` for the job scheduler your HPC uses).
+  
 ### Files
 
 - [_Snakefile_](Snakefile): pipeline script (reads in configs, commands for each pipeline step/rule)
@@ -58,11 +71,6 @@ git clone https://github.com/niaid/virome-pipeline
 
 ![discovir pipeline diagram](docs/discovir.drawio.svg "DiscoVir Pipeline diagram")
 
-## Notes
-
-- The code here is tested to run on NIAID's HPC Locus, but the pipeline is also containerized as a [docker image](docs/README_for_using_docker_image.md) that can be run on any HPC.  
-- If you do not want to use the docker image, it would be easy to adapt to another HPC that uses environment modules by modifying the [cluster config file](locus.cluster_config.yaml) (with the correct module names and memory/cpu arguments for your HPC), and your own job submit script (in particular modifying the `$clustercmd` for the job scheduler your HPC uses).
-- In the future we hope to add additional steps for specialized analysis and make the pipeline more flexible.
 
 ## References
 
