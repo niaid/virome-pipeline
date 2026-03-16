@@ -14,7 +14,7 @@ The pipeline first searchs for viral genomes using geNomad<sup>2</sup>, which al
 
 ## Demo data
 
-You can find test dataset to run the pipeline and example outputs (described in detail [here](docs/README_for_DiscoVir_outputs.md)) for DiscoVir at https://nephele.niaid.nih.gov/user-guide/demo-datasets under the Explore section. 
+You can find a test dataset to run the pipeline and example outputs (described in detail [here](docs/README_for_DiscoVir_outputs.md)) for DiscoVir at https://nephele.niaid.nih.gov/user-guide/demo-datasets under the Explore section. 
 
 ## Run the pipeline in Nephele
 
