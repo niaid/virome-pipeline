@@ -12,6 +12,10 @@ The pipeline accepts metagenomic assembly sequences (.fasta) and binary alignmen
 
 The pipeline first searchs for viral genomes using geNomad<sup>2</sup>, which also provides viral taxonomy and functional classification of each viral genomes. The viral genomes are also functionally classified with DRAM-v<sup>3</sup> and (optionally) diamond<sup>4</sup> using the nr database. Gene abundances per sample are produced from these outputs using VERSE<sup>5</sup>. From here, the user has the option to filter the resulting sequences based on completeness using CheckV<sup>6</sup>. Either the output of geNomad or CheckV is used to cluster viral genomes with BBTools dedupe<sup>7</sup> and mmseqs<sup>8</sup> to produce vOTUs<sup>9</sup>. Finally, abundances and host taxonomy of vOTUs are produced. In the future we hope to add additional steps for specialized analysis and make the pipeline even more flexible.
 
+## Demo data
+
+You can find test dataset to run the pipeline and example outputs (described in detail [here](docs/README_for_DiscoVir_outputs.md)) for DiscoVir at https://nephele.niaid.nih.gov/user-guide/demo-datasets under the Explore section. 
+
 ## Run the pipeline in Nephele
 
 Nephele is NIAID's free microbiome analysis cloud-based application (https://nephele.niaid.nih.gov) that allows for automated processing of your sequence data without needing the computational resources or access to an HPC. You can read more about DiscoVir in Nephele [here](https://nephele.niaid.nih.gov/user-guide/pipeline-descriptions/discovir). Check out the [Userguide](https://nephele.niaid.nih.gov/user-guide) to get started! 
@@ -34,6 +38,7 @@ The pipeline is containerized as a Docker image that can be run on any HPC. Star
 - [_locus_submit_vp.sh_](locus_submit_vp.sh): batch job submit script for running the pipeline on Locus
 - *[scripts](scripts)*: see [scripts README](scripts/README.md)
 - *[docs/README_for_DiscoVir_outputs.md](docs/README_for_DiscoVir_outputs.md)*: explanation of outputs of the pipeline
+- *[docs/README_for_using_docker_image.md](https://github.com/niaid/virome-pipeline/blob/main/docs/README_for_using_docker_image.md)*: How to run the Docker image.
 - Video: [Viral_Metagenomics_Analysis_subtitled.mp4](https://s3.amazonaws.com/proj-bip-prod-publicread/training/virome-pipeline/Viral_Metagenomics_Analysis_subtitled.mp4)
 
 ## Running the Pipeline
